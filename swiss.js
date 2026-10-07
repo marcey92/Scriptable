@@ -31,8 +31,8 @@ S.WD = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Satur
 S.dayStart = offset => {
   const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + offset); return d;
 };
-S.dateLabel = (d = new Date()) =>
-  `${S.p(d.getDate())}.${S.p(d.getMonth() + 1)} ${S.WD[d.getDay()].slice(0, 3)}`;
+S.dayMonth = (d = new Date()) => `${S.p(d.getDate())}.${S.p(d.getMonth() + 1)}`;   // "07.10"
+S.dateLabel = (d = new Date()) => `${S.dayMonth(d)} ${S.WD[d.getDay()].slice(0, 3)}`;   // "07.10 Tue"
 S.timeLabel = d => `${S.p(d.getHours())}:${S.p(d.getMinutes())}`;
 
 // ---- layout ----
