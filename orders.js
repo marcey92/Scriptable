@@ -1,17 +1,17 @@
 const S = importModule("swiss");
 
-// Parcels and important emails, read from Marcel's misc server (pushed there by Hermes).
-// Home Screen widgets can be read by bystanders, so this shows only a retailer (or the generic
-// title of a private order) and its status. No tracking numbers, no email bodies.
+// One list of what is going on: parcels and important emails, read from Marcel's misc server
+// (pushed there by Hermes). A red star marks urgent emails and problem parcels.
+// Home Screen widgets can be read by bystanders, so a parcel shows only its retailer (or the generic
+// title of a private order) and status, and an email only its sender and subject. No tracking
+// numbers, no email summaries or bodies.
 const BASE = "https://misc.mrdrr.uk/widget/api/";
 const KEY = "misc-widget-read-token";   // the read token lives in the Keychain, never in this file
-const TITLE = "Orders";
+const TITLE = "Now";
 const HIDE_DELIVERED_AFTER_H = 48;
-const MAX_IMPORTANT = 3;
-const STATUS_W = 140;       // status column on the large widget
-const COL_GAP = 12;         // gap between the two columns on the medium widget
-
-const ORDER = ["problem", "out_for_delivery", "with_courier", "dispatched", "ordered", "delivered"];
+const MARK_W = 14;          // star / box column
+const STATUS_W = 118;       // status column (medium, large)
+const SMALL_STATUS_W = 44;  // short status on the small widget
 
 // ---- cache: the last good copy of both feeds, so the widget still draws when the server can't be reached ----
 const fm = FileManager.local();
@@ -71,32 +71,47 @@ async function load(token) {
   return out;
 }
 
-// ---- what to show ----
-const rank = o => { const i = ORDER.indexOf(o.status); return i === -1 ? ORDER.length : i; };
-function visibleOrders(orders) {
-  const cutoff = Date.now() - HIDE_DELIVERED_AFTER_H * 3600 * 1000;
-  return orders
-    .filter(o => !(o.delivered || o.status === "delivered") || new Date(o.last_event).getTime() >= cutoff)
-    .sort((a, b) => rank(a) - rank(b) || new Date(b.last_event) - new Date(a.last_event));
-}
-function visibleImportant(list) {
-  return [...list].sort((a, b) => (b.urgent - a.urgent) || (new Date(b.received) - new Date(a.received)));
-}
-const nameOf = o => (o.private ? o.title : o.retailer || o.title) || "Parcel";
+// ---- what to show: one list of everything going on ----
+// rank: lower comes first. Things that need you, then parcels by how close they are, then emails.
+const PARCEL_RANK = { out_for_delivery: 1, with_courier: 3, dispatched: 4, ordered: 5, delivered: 7 };
+const SHORT = { out_for_delivery: "Today", with_courier: "Courier", dispatched: "Sent", ordered: "Ordered", problem: "Problem", delivered: "Done" };
+
 // eta is a date or a range "YYYY-MM-DD/YYYY-MM-DD"; show the latest day as DD.MM
 function etaText(eta) {
   if (!eta) return "";
-  const last = String(eta).split("/").pop();
-  const m = last.match(/^\d{4}-(\d{2})-(\d{2})/);
+  const m = String(eta).split("/").pop().match(/^\d{4}-(\d{2})-(\d{2})/);
   return m ? `${m[2]}.${m[1]}` : "";
 }
-function statusText(o, withEta) {
-  const e = withEta && o.status !== "delivered" ? etaText(o.eta) : "";
-  return e ? `${o.status_label} · ${e}` : o.status_label || "";
+const isDelivered = o => o.delivered || o.status === "delivered";
+
+// parcels and emails as the same kind of item: { star, name, long, short, rank, when }
+function items(data) {
+  const cutoff = Date.now() - HIDE_DELIVERED_AFTER_H * 3600 * 1000;
+  const out = [];
+  for (const o of data.orders) {
+    if (isDelivered(o) && new Date(o.last_event).getTime() < cutoff) continue;
+    const eta = isDelivered(o) ? "" : etaText(o.eta);
+    const label = o.status_label || "";
+    out.push({
+      star: o.status === "problem",
+      name: (o.private ? o.title : o.retailer || o.title) || "Parcel",
+      long: eta ? `${label} · ${eta}` : label,
+      short: SHORT[o.status] || label,
+      rank: o.status === "problem" ? 0 : (PARCEL_RANK[o.status] || 6),
+      when: new Date(o.last_event).getTime() || 0,
+      done: isDelivered(o),
+    });
+  }
+  for (const i of data.important) {
+    const name = [i.from, i.subject].filter(Boolean).join(" · ");
+    out.push({
+      star: !!i.urgent, name, long: "Email", short: "",
+      rank: i.urgent ? 0 : i.action_needed ? 2 : 6,
+      when: new Date(i.received).getTime() || 0, done: false,
+    });
+  }
+  return out.sort((a, b) => a.rank - b.rank || b.when - a.when);
 }
-const colourOf = o => (o.status === "problem" ? S.ALERT : S.FG);
-const importantColour = i => (i.urgent ? S.ALERT : S.FG);
-const importantText = i => `${i.urgent ? "! " : ""}${i.subject || i.from || ""}`;
 
 // right-hand header text: the date, or when the data is old, the time it was last fetched
 function headRight(data, small) {
@@ -104,22 +119,10 @@ function headRight(data, small) {
   return small ? null : S.dateLabel();
 }
 
-// two lines per order: name, then dimmed status
-function orderBlock(parent, width, orders, count) {
-  orders.slice(0, count).forEach((o, i) => {
-    if (i > 0) parent.addSpacer(S.ROW_GAP);
-    S.row(parent, width, [{ text: nameOf(o) }], colourOf(o));
-    parent.addSpacer(S.ROW_GAP);
-    S.row(parent, width, [{ text: statusText(o, true) }], o.status === "problem" ? S.ALERT : S.DIM);
-  });
-}
-
 // ---- Home Screen widget ----
 function buildWidget(data) {
   const w = S.widget();
-  const { innerW, availH, small, large } = S.metrics();
-  const orders = visibleOrders(data.orders);
-  const important = visibleImportant(data.important);
+  const { innerW, availH, small } = S.metrics();
 
   if (data.error || data.rejected) {
     S.header(w, innerW, TITLE, null);
@@ -127,60 +130,37 @@ function buildWidget(data) {
     return S.finish(w);
   }
 
-  if (small) {
-    S.header(w, innerW, TITLE, headRight(data, true));
-    if (!orders.length) S.note(w, innerW, "No active orders");
-    orderBlock(w, innerW, orders, Math.floor(S.rowsFor(availH, 1) / 2));
-    return S.finish(w);
-  }
-
-  if (large) {
-    const rows = S.rowsFor(availH, 2);
-    const nImp = Math.min(MAX_IMPORTANT, important.length);
-    const nOrd = Math.max(1, rows - Math.max(nImp, 1));   // an empty section still uses one row for its note
-    S.header(w, innerW, TITLE, headRight(data, false));
-    if (!orders.length) S.note(w, innerW, "No active orders");
-    orders.slice(0, nOrd).forEach((o, i) => {
-      if (i > 0) w.addSpacer(S.ROW_GAP);
-      S.row(w, innerW, [{ text: nameOf(o) }, { text: statusText(o, true), w: STATUS_W, right: true }], colourOf(o));
-    });
-    w.addSpacer(S.SECTION_GAP);
-    S.header(w, innerW, "Important", null);
-    if (!important.length) S.note(w, innerW, "Nothing important");
-    important.slice(0, nImp).forEach((i, n) => {
-      if (n > 0) w.addSpacer(S.ROW_GAP);
-      S.row(w, innerW, [{ text: importantText(i) }], importantColour(i));
-    });
-    return S.finish(w);
-  }
-
-  // medium: orders on the left, important on the right
-  const colW = Math.floor((innerW - COL_GAP) / 2);
+  const list = items(data);
   const rows = S.rowsFor(availH, 1);
-  const cols = w.addStack(); cols.size = new Size(innerW, availH); cols.layoutHorizontally();
-  const left = cols.addStack(); left.layoutVertically(); left.size = new Size(colW, availH);
-  cols.addSpacer(COL_GAP);
-  const right = cols.addStack(); right.layoutVertically(); right.size = new Size(colW, availH);
+  const more = list.length > rows;
+  const shown = more ? list.slice(0, Math.max(1, rows - 1)) : list;
+  const rightW = small ? SMALL_STATUS_W : STATUS_W;
 
-  S.header(left, colW, TITLE, null);
-  if (!orders.length) S.note(left, colW, "No active orders");
-  orderBlock(left, colW, orders, Math.floor(rows / 2));
-
-  S.header(right, colW, "Important", headRight(data, true));
-  if (!important.length) S.note(right, colW, "Nothing important");
-  important.slice(0, Math.min(MAX_IMPORTANT, rows)).forEach((i, n) => {
-    if (n > 0) right.addSpacer(S.ROW_GAP);
-    S.row(right, colW, [{ text: importantText(i) }], importantColour(i));
+  S.header(w, innerW, TITLE, headRight(data, small));
+  if (!list.length) S.note(w, innerW, "Nothing going on");
+  shown.forEach((it, i) => {
+    if (i > 0) w.addSpacer(S.ROW_GAP);
+    S.row(w, innerW, [
+      { text: it.star ? "★" : "□", w: MARK_W },
+      { text: it.name },
+      { text: small ? it.short : it.long, w: rightW, right: true, colour: it.star ? undefined : S.DIM },
+    ], it.star ? S.ALERT : S.FG);
   });
-  return w;
+  if (more && rows > 1) {
+    w.addSpacer(S.ROW_GAP);
+    S.row(w, innerW, [{ text: "", w: MARK_W }, { text: `+${list.length - shown.length} more` }], S.DIM);
+  }
+  return S.finish(w);
 }
 
 // ---- Lock Screen ----
+function lockLine(it) {
+  return `${it.star ? "★ " : ""}${it.name}${it.short ? " · " + it.short : ""}`;
+}
 function lockLines(data, max) {
   if (data.error) return [data.error];
-  const orders = visibleOrders(data.orders);
-  const lines = orders.slice(0, max).map(o => `${nameOf(o)} · ${o.status_label}`);
-  return lines.length ? lines : ["No active orders"];
+  const lines = items(data).slice(0, max).map(lockLine);
+  return lines.length ? lines : ["Nothing going on"];
 }
 function buildLockRect(data) {
   const w = S.lockWidget();
@@ -192,12 +172,12 @@ function buildLockRect(data) {
   return w;
 }
 function activeCount(data) {
-  return data.error ? "–" : String(visibleOrders(data.orders).filter(o => o.status !== "delivered" && !o.delivered).length);
+  return data.error ? "–" : String(items(data).filter(i => !i.done).length);
 }
 function inlineLine(data) {
   if (data.error) return data.error;
-  const urgent = data.important.filter(i => i.urgent).length;
-  return `${activeCount(data)} orders` + (urgent ? ` · ${urgent} urgent` : "");
+  const stars = items(data).filter(i => i.star).length;
+  return `${activeCount(data)} going on` + (stars ? ` · ${stars} ★` : "");
 }
 
 // ---- run ----
