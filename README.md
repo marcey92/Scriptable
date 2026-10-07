@@ -8,6 +8,7 @@ Scriptable widgets for iOS in one fixed style: a title, a hairline rule, then ro
 | `calendar-list.js` | The next days that have events | Small, medium, large, Lock Screen |
 | `battery.js` | Charge as a figure and a bar of boxes | Small, medium, Lock Screen |
 | `weather.js` | Hours, temperature, conditions, rain chance | Small, medium, large, Lock Screen |
+| `orders.js` | Parcels and their status, plus important emails (from the misc server) | Small, medium, large, Lock Screen |
 | `swiss.js` | The shared style. Not a widget; the others load it | |
 | `update.js` | Pulls the latest scripts from this repo | Run in the app |
 
@@ -23,6 +24,15 @@ Every widget starts with `importModule("swiss")`. Colours, type sizes, margins, 
 4. For `habit-grid.js`, set the widget's "When Interacting" to "Run Script".
 
 After that, run `update.js` to pull changes from GitHub. For a private repo, put a read-only token in `TOKEN` at the top of `update.js` on your phone (never commit it).
+
+## Orders widget
+
+`orders.js` reads `https://misc.mrdrr.uk/widget/api/orders` and `/important`, which Hermes keeps up to date. The read token is kept in the iPhone Keychain, never in the script or the repo.
+
+1. Run `orders.js` inside Scriptable once. It asks for the read token and stores it. If the server rejects the token it asks again.
+2. Add a Scriptable widget and pick `orders.js`.
+
+It shows only the retailer (or a private order's generic title) and the status, never tracking numbers or email text. If the server can't be reached it draws the last good copy with a "stale HH:MM" marker. Urgent emails and problem orders use the one accent colour, `S.ALERT`.
 
 ## Google Calendar
 
