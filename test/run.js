@@ -232,7 +232,7 @@ async function run(file, opts = {}) {
     "out for delivery before ordered": ({ text }) => text.indexOf("Zalando") < (text.indexOf("Amazon") === -1 ? 1e9 : text.indexOf("Amazon")),
     "range eta shows the later day": ({ text }) => text.includes("Out for delivery · 09.10"),
     "private order shows its generic title, not the retailer": ({ text }) => !/^X$/m.test(text) && text.includes("Parcel"),
-    "emails show the subject, with the sender on the right": ({ text }) => /Boiler repair today\s+Landlord/.test(text),
+    "emails show the sender, then the subject on the right": ({ text }) => /★ Landlord\s+Boiler repair today/.test(text),
     "today shows a time": ({ text }) => /\d\d:\d\d\s+Zalando/.test(text),
     "every row shows an item, no +N more line": ({ text }) => !/more/.test(text) && text.split("\n").filter(l => /^\s*(\d\d:\d\d|Yest|\d\d\.\d\d)/.test(l)).length === 4,
   }, note: "one list" });
@@ -240,9 +240,9 @@ async function run(file, opts = {}) {
     "ordered sorts after out for delivery": ({ text }) => text.indexOf("Zalando") < text.indexOf("Amazon"),
     "recent delivered is shown, last": ({ text }) => text.includes("Apple") && text.indexOf("Apple") > text.indexOf("Amazon"),
     "delivered older than 48h is hidden": ({ text }) => !text.includes("IKEA"),
-    "yesterday shows Yest": ({ text }) => /Yest\s+★ Review your statement/.test(text),
+    "yesterday shows Yest": ({ text }) => /Yest\s+★ Bank/.test(text),
     "older than yesterday shows the date": ({ text }) => { const d = new Date(Date.now() - 48 * 3600 * 1000); return new RegExp(`${String(d.getDate()).padStart(2, "0")}\\.${String(d.getMonth() + 1).padStart(2, "0")}\\s+Amazon`).test(text); },
-    "every important email is starred": ({ text }) => /★ Boiler/.test(text) && /★ Review your statement/.test(text),
+    "every important email is starred": ({ text }) => /★ Landlord/.test(text) && /★ Bank/.test(text),
     "nothing is cut off on the large widget": ({ text }) => !/more/.test(text),
   }, note: "hide old delivered" });
   await run("orders.js", { ...widgetOpts, family: "medium", offline: true, expect: {
