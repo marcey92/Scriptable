@@ -273,6 +273,28 @@ async function run(file, opts = {}) {
     "wrong token can be replaced in the app": ({ keychainSet }) => keychainSet === "tok",
   }, note: "wrong token, re-enter" });
 
+  // the single now feed: Hermes's order and wording, drawn as given
+  const nowFeed = { now: { schema_version: 2, updated: iso(0), items: [
+    { when: iso(30), star: false, title: "Older first", detail: "Hermes put me on top" },
+    { when: iso(1), star: true, title: "Homes & Villas", detail: "Reply to your complaint" },
+    { when: iso(2), star: false, title: "Amazon", detail: "Out for delivery · 07.10", short: "Today" },
+    ...[3, 4, 5].map(n => ({ when: iso(n), star: false, title: `Shop${n}`, detail: "Dispatched" })),
+    { when: iso(80), star: true, title: "Council", detail: "Old but important" },
+  ] } };
+  const savedCache2 = files["/docs/swiss-orders.json"];
+  await run("orders.js", { token: "tok", feeds: nowFeed, family: "medium", expect: {
+    "items keep Hermes's order": ({ text }) => text.indexOf("Older first") < text.indexOf("Homes & Villas") && text.indexOf("Homes & Villas") < text.indexOf("Amazon"),
+    "title then detail on the right": ({ text }) => /★ Homes & Villas\s+Reply to your complaint/.test(text),
+    "a starred item below the fold takes the bottom row": ({ text }) => /★ Council/.test(text.split("\n").pop()),
+  }, note: "now feed" });
+  await run("orders.js", { token: "tok", feeds: nowFeed, family: "small", expect: {
+    "short replaces detail on small": ({ text }) => /Amazon\s+Today/.test(text),
+  }, note: "now feed" });
+  await run("orders.js", { token: "tok", feeds: nowFeed, family: "medium", offline: true, expect: {
+    "offline shows the cached now feed": ({ text }) => text.includes("stale") && text.includes("Homes & Villas"),
+  }, note: "now feed, offline" });
+  files["/docs/swiss-orders.json"] = savedCache2;
+
   for (const family of ["large", "medium", "accessoryInline"]) await run("overview.js", { ...widgetOpts, family });
   await run("overview.js", { ...widgetOpts, family: "large", expect: {
     "three sections: day, habits, now": ({ text }) => /^Today/m.test(text) && /^Habits/m.test(text) && /^Now/m.test(text),

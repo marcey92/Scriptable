@@ -49,11 +49,24 @@ async function fetchFeed(name, token) {
   return json;
 }
 
-// returns { orders, important, fetchedAt, stale, error? }
+// returns { items } (the now feed, as Hermes ordered it) or { orders, important } (the older pair),
+// plus { fetchedAt, stale, rejected?, error? }
 async function load(token) {
   const cache = readCache();
-  const out = { orders: cache.orders || [], important: cache.important || [], fetchedAt: cache.fetchedAt, stale: true };
+  const out = cache.items
+    ? { items: cache.items, fetchedAt: cache.fetchedAt, stale: true }
+    : { orders: cache.orders || [], important: cache.important || [], fetchedAt: cache.fetchedAt, stale: true };
   if (!token) return { ...out, error: "Run in Scriptable once to set the token" };
+  try {
+    const json = await fetchFeed("now", token);
+    const items = Array.isArray(json.items) ? json.items : [];
+    writeCache({ items, fetchedAt: Date.now() });
+    return { items, fetchedAt: Date.now(), stale: false };
+  } catch (e) {
+    if (!(e instanceof Rejected)) return out;   // offline: the last good copy
+  }
+  // no now feed yet (or a wrong token): the older pair
+  delete out.items; out.orders = cache.orders || []; out.important = cache.important || [];
   let ok = 0;
   const next = { ...cache };
   for (const [name, list] of [["orders", "orders"], ["important", "important"]]) {
@@ -90,8 +103,16 @@ function whenText(ms) {
   return `${S.p(d.getDate())}.${S.p(d.getMonth() + 1)}`;
 }
 
-// parcels and emails as the same kind of item, newest first: { star, name, long, short, lock, when }
+// the rows to show: { star, name, long, short, lock, when, done }.
+// From the now feed: in Hermes's order, as Hermes wrote them. From the older pair: built here, newest first.
 function items(data) {
+  if (data.items) {
+    return data.items.map(i => ({
+      star: !!i.star, name: i.title || "", long: i.detail || "", short: i.short || "",
+      lock: [i.title, i.short || i.detail].filter(Boolean).join(" · "),
+      when: new Date(i.when).getTime() || 0, done: false,
+    }));
+  }
   const cutoff = Date.now() - HIDE_DELIVERED_AFTER_H * 3600 * 1000;
   const out = [];
   for (const o of data.orders) {
@@ -119,8 +140,8 @@ function items(data) {
   return out.sort((a, b) => b.when - a.when);
 }
 
-// the newest `n` items, except that a starred item never drops off: any that are too old to fit
-// replace the oldest unstarred ones at the bottom (so the list stays newest first)
+// the first `n` items, except that a starred item never drops off: any that are too far down to fit
+// replace the last unstarred ones at the bottom (so the order is kept)
 function pick(list, n) {
   const top = list.slice(0, n);
   const missing = list.slice(n).filter(it => it.star);

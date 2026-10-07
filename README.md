@@ -31,7 +31,7 @@ After that, run `update.js` to pull changes from GitHub. For a private repo, put
 
 ## Orders widget
 
-`orders.js` reads `https://misc.mrdrr.uk/widget/api/orders` and `/important`, which Hermes keeps up to date. The read token is kept in the iPhone Keychain, never in the script or the repo.
+`orders.js` reads `https://misc.mrdrr.uk/widget/api/now`, one list that Hermes keeps up to date and fully decides: which items, their order, the stars and the wording (format: `apps/widget/README.md` in misc-apps). Until that feed exists it falls back to the older `/orders` and `/important` pair. The read token is kept in the iPhone Keychain, never in the script or the repo.
 
 1. Run `orders.js` inside Scriptable once. It asks for the read token and stores it. If the server rejects the token it asks again.
 2. Add a Scriptable widget and pick `orders.js`.
