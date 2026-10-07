@@ -7,6 +7,7 @@ const path = require("path");
 const root = path.join(__dirname, "..");
 
 let failures = 0;
+let feedCalls = null;
 const files = {};   // fake Scriptable documents folder
 
 class Text {
@@ -21,7 +22,7 @@ class Stack {
   }
   addSpacer(n) { this.children.push({ spacer: n === undefined ? "flex" : n }); }
   centerAlignContent() {} bottomAlignContent() {} topAlignContent() {}
-  layoutHorizontally() {} layoutVertically() {}
+  layoutHorizontally() { this.vertical = false; } layoutVertically() { this.vertical = true; }
   setPadding(...p) { this.padding = p; }
 }
 class ListWidget extends Stack {
@@ -32,6 +33,7 @@ class ListWidget extends Stack {
 
 // width a row of fixed-size children needs, to check it fits its stack
 function fixedWidth(s) {
+  if (s.vertical) return Math.max(0, ...s.children.filter(c => c instanceof Stack && c.size).map(c => c.size.width));
   let w = 0;
   for (const c of s.children) {
     if (c.spacer !== undefined) w += c.spacer === "flex" ? 0 : c.spacer;
@@ -79,7 +81,7 @@ async function run(file, opts = {}) {
     { title: "Psychoanalysis | Mayessi Svoronou", startDate: at(1, 14), endDate: at(1, 15), isAllDay: false, cal: "you@gmail.com" },
     { title: "Brunch", startDate: at(3, 11), endDate: at(3, 12), isAllDay: false, cal: "Home" },
   ];
-  let widget = null, alerts = 0;
+  let widget = null, alerts = 0, keychainSet = null;
 
   const g = {
     console: { log: () => {} },
@@ -98,8 +100,12 @@ async function run(file, opts = {}) {
     URLScheme: { forRunningScript: () => "scriptable:///run/x" },
     App: { close: () => {} },
     Timer: { schedule: (ms, repeats, fn) => { const t = setTimeout(fn, ms); t.unref(); return t; } },
+    Keychain: {
+      contains: k => opts.token !== undefined ? opts.token !== null : false,
+      get: k => opts.token, set: (k, v) => { opts.token = v; keychainSet = v; },
+    },
     Alert: class {
-      addAction() {} addCancelAction() {}
+      addAction() {} addCancelAction() {} addSecureTextField() {} textFieldValue() { return opts.typedToken || ""; }
       async presentSheet() { alerts++; return -1; } async present() { alerts++; return 0; }
     },
     FileManager: (() => {
@@ -125,9 +131,17 @@ async function run(file, opts = {}) {
       reverseGeocode: async () => [{ locality: "London" }],
     },
     Request: class {
-      constructor(url) { this.url = url; }
+      constructor(url) { this.url = url; this.headers = {}; }
       async loadJSON() {
         if (opts.offline) throw new Error("offline");
+        if (this.url.includes("/widget/api/")) {
+          const feed = this.url.split("/").pop();
+          const good = this.headers.Authorization === `Bearer ${opts.goodToken || "tok"}`;
+          const body = opts.feeds && opts.feeds[feed];
+          this.response = { statusCode: !good || !body ? 404 : (opts.status || 200) };
+          if (feedCalls) feedCalls.push({ feed, auth: this.headers.Authorization });
+          return this.response.statusCode === 200 ? body : { error: "not found" };
+        }
         const t0 = Math.floor(new Date(now).setHours(0, 0, 0, 0) / 1000);
         const n = 72, time = [], temp = [], rain = [], code = [];
         for (let i = 0; i < n; i++) { time.push(t0 + i * 3600); temp.push(10 + (i % 24) / 3); rain.push((i * 7) % 100); code.push([0, 2, 3, 61, 80][i % 5]); }
@@ -156,6 +170,9 @@ async function run(file, opts = {}) {
     console.log(`\n${issues.length ? "FAIL" : "ok  "} ${label}`);
     if (widget) for (const c of widget.children) { const d = describe(c); if (d) console.log("     " + d); }
     if (opts.inApp) console.log(`     (alerts shown: ${alerts})`);
+    if (opts.expect) for (const [what, fn] of Object.entries(opts.expect)) {
+      if (!fn({ widget, text: widget ? widget.children.map(describe).filter(Boolean).join("\n") : "", keychainSet, files })) issues.push(`expected: ${what}`);
+    }
     issues.forEach(i => console.log("     ! " + i));
     failures += issues.length ? 1 : 0;
   } catch (e) {
@@ -190,6 +207,54 @@ async function run(file, opts = {}) {
   delete files["/docs/swiss-weather.json"];
   await run("weather.js", { family: "medium", offline: true, note: "offline, no cache" });
   await run("weather.js", { family: "medium", noLocation: true, note: "no location" });
+
+  const iso = h => new Date(Date.now() - h * 3600 * 1000).toISOString();
+  const feeds = {
+    orders: { schema_version: 1, updated: iso(0), orders: [
+      { id: "1", retailer: "Amazon", title: "Kettle", private: false, status: "ordered", status_label: "Ordered", eta: "2026-10-12", tracking_number: "TRK-SECRET-1", last_event: iso(5), delivered: false },
+      { id: "2", retailer: "Zalando", title: "Shoes", private: false, status: "out_for_delivery", status_label: "Out for delivery", eta: "2026-10-08/2026-10-09", tracking_number: "TRK-SECRET-2", last_event: iso(2), delivered: false },
+      { id: "3", retailer: "X", title: "Parcel", private: true, status: "problem", status_label: "Delivery problem", eta: null, tracking_number: null, last_event: iso(3), delivered: false },
+      { id: "4", retailer: "IKEA", title: "Shelf", private: false, status: "delivered", status_label: "Delivered", eta: null, tracking_number: null, last_event: iso(60), delivered: true },
+      { id: "5", retailer: "Apple", title: "Cable", private: false, status: "delivered", status_label: "Delivered", eta: null, tracking_number: null, last_event: iso(10), delivered: true },
+    ] },
+    important: { schema_version: 1, updated: iso(0), important: [
+      { id: "a", from: "Bank", subject: "Review your statement", summary: "BODY-SECRET-A", received: iso(1), urgent: false, action_needed: true },
+      { id: "b", from: "Landlord", subject: "Boiler repair today", summary: "BODY-SECRET-B", received: iso(9), urgent: true, action_needed: true },
+    ] },
+  };
+  const widgetOpts = { token: "tok", feeds };
+  const clean = ({ text }) => !/SECRET/.test(text);
+  for (const family of [...home, ...lock]) await run("orders.js", { ...widgetOpts, family, expect: { "no tracking numbers or email bodies": clean } });
+  await run("orders.js", { ...widgetOpts, family: "small", expect: {
+    "problem sorts before out for delivery": ({ text }) => text.indexOf("Parcel") < text.indexOf("Zalando"),
+    "private order shows its generic title, not the retailer": ({ text }) => !/^X$/m.test(text) && text.includes("Parcel"),
+    "range eta shows the later day": ({ text }) => text.includes("Out for delivery · 09.10"),
+  }, note: "sorting" });
+  await run("orders.js", { ...widgetOpts, family: "large", expect: {
+    "ordered sorts after out for delivery": ({ text }) => text.indexOf("Zalando") < text.indexOf("Amazon"),
+    "recent delivered is shown": ({ text }) => text.includes("Apple"),
+    "delivered older than 48h is hidden": ({ text }) => !text.includes("IKEA"),
+    "urgent item comes first": ({ text }) => text.indexOf("Boiler") < text.indexOf("statement"),
+  }, note: "hide old delivered" });
+  await run("orders.js", { ...widgetOpts, family: "medium", offline: true, expect: {
+    "stale cache is shown with a stale marker": ({ text }) => text.includes("stale") && text.includes("Zalando"),
+  }, note: "offline, cached" });
+  delete files["/docs/swiss-orders.json"];
+  await run("orders.js", { ...widgetOpts, family: "medium", offline: true, expect: {
+    "empty and offline still draws a message": ({ text }) => text.includes("No active orders"),
+  }, note: "offline, no cache" });
+  await run("orders.js", { feeds, family: "medium", expect: {
+    "asks to run in the app when there is no token": ({ text }) => text.includes("Run in Scriptable"),
+  }, note: "no token" });
+  await run("orders.js", { feeds, inApp: true, typedToken: "tok", expect: {
+    "token typed in the app goes to the Keychain": ({ keychainSet }) => keychainSet === "tok",
+  }, note: "first run, enter token" });
+  await run("orders.js", { ...widgetOpts, token: "nope", family: "medium", expect: {
+    "wrong token says so": ({ text }) => text.includes("Token rejected"),
+  }, note: "wrong token" });
+  await run("orders.js", { feeds, token: "nope", inApp: true, typedToken: "tok", expect: {
+    "wrong token can be replaced in the app": ({ keychainSet }) => keychainSet === "tok",
+  }, note: "wrong token, re-enter" });
 
   await run("update.js", { inApp: true });
 

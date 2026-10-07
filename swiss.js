@@ -8,6 +8,7 @@ S.BG = new Color("#0F1F47");            // deep navy, matched to the ocean wallp
 S.FG = new Color("#FFFFFF");
 S.DIM = new Color("#FFFFFF", 0.5);      // secondary text
 S.EMPTY = new Color("#FFFFFF", 0.18);   // empty box
+S.ALERT = new Color("#FF6B5E");         // the one accent: problems and urgent items only
 S.LOCK_ON = new Color("#FFFFFF");
 S.LOCK_OFF = new Color("#FFFFFF", 0.3);
 

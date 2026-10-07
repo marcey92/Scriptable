@@ -4,7 +4,7 @@ const USER = "marcey92";
 const REPO = "Scriptable";
 const BRANCH = "main";
 const TOKEN = "";   // leave empty for a public repo; a private repo needs a read-only GitHub token here
-const FILES = ["swiss.js", "habit-grid.js", "calendar-list.js", "battery.js", "weather.js"];
+const FILES = ["swiss.js", "habit-grid.js", "calendar-list.js", "battery.js", "weather.js", "orders.js"];
 
 let fm;
 try { fm = FileManager.iCloud(); fm.documentsDirectory(); }
