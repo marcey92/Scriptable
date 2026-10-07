@@ -6,7 +6,7 @@ const STEP = 3;             // hours between rows
 const UNITS = "celsius";    // or "fahrenheit"
 const TIME_W = 52;          // same time column as the calendar
 const TEMP_W = 34;
-const RAIN_W = 34;
+const RAIN_W = 40;
 const TAP_URL = "weather://";   // tapping the widget opens Apple's Weather app
 
 // ---- cache: last known place and forecast, so the widget still draws offline ----
