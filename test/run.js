@@ -144,7 +144,7 @@ async function run(file, opts = {}) {
         }
         const t0 = Math.floor(new Date(now).setHours(0, 0, 0, 0) / 1000);
         const n = 72, time = [], temp = [], rain = [], code = [];
-        for (let i = 0; i < n; i++) { time.push(t0 + i * 3600); temp.push(10 + (i % 24) / 3); rain.push((i * 7) % 100); code.push([0, 2, 3, 61, 80][i % 5]); }
+        for (let i = 0; i < n; i++) { time.push(t0 + i * 3600); temp.push(10 + (i % 24) / 3); rain.push(opts.dry ? 5 : (i * 7) % 100); code.push([0, 2, 3, 61, 80][i % 5]); }
         return { hourly: { time, temperature_2m: temp, precipitation_probability: rain, weather_code: code } };
       }
     },
@@ -203,6 +203,12 @@ async function run(file, opts = {}) {
   await run("battery.js", { family: "small", battery: 0.03, note: "3%" });
 
   for (const family of [...home, ...lock]) await run("weather.js", { family });
+  await run("weather.js", { family: "accessoryRectangular", expect: {
+    "header, then now, range and rain": ({ text }) => /^Weather/.test(text) && /^\d+°  \w/m.test(text) && /^Low -?\d+° · High -?\d+°$/m.test(text) && /^Rain \d+% at \d\d:\d\d$/m.test(text),
+  }, note: "summary" });
+  await run("weather.js", { family: "accessoryRectangular", dry: true, expect: {
+    "low rain chances read as dry": ({ text }) => /^Dry next 12 hours$/m.test(text),
+  }, note: "dry" });
   await run("weather.js", { family: "medium", offline: true, note: "offline, cached" });
   delete files["/docs/swiss-weather.json"];
   await run("weather.js", { family: "medium", offline: true, note: "offline, no cache" });
