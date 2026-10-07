@@ -10,6 +10,8 @@ const KEY = "misc-widget-read-token";   // the read token lives in the Keychain,
 const TITLE = "Now";
 const HIDE_DELIVERED_AFTER_H = 48;
 const CHAR_W = 6.4;         // average width of one character at the row text size, to size the status column
+const STAR_W = 12;          // star column
+const WHEN_W = 44;          // time column, as wide as the one in the weather and calendar widgets
 
 // ---- cache: the last good copy of both feeds, so the widget still draws when the server can't be reached ----
 const fm = FileManager.local();
@@ -82,7 +84,14 @@ function etaText(eta) {
 }
 const isDelivered = o => o.delivered || o.status === "delivered";
 
-// parcels and emails as the same kind of item: { star, name, long, short, rank, when }
+// "14:02" if it happened today, otherwise the date as "06.10"
+function whenText(ms) {
+  if (!ms) return "";
+  const d = new Date(ms);
+  return d.toDateString() === new Date().toDateString() ? S.timeLabel(d) : `${S.p(d.getDate())}.${S.p(d.getMonth() + 1)}`;
+}
+
+// parcels and emails as the same kind of item: { star, name, long, short, lock, rank, when }
 function items(data) {
   const cutoff = Date.now() - HIDE_DELIVERED_AFTER_H * 3600 * 1000;
   const out = [];
@@ -90,20 +99,22 @@ function items(data) {
     if (isDelivered(o) && new Date(o.last_event).getTime() < cutoff) continue;
     const eta = isDelivered(o) ? "" : etaText(o.eta);
     const label = o.status_label || "";
+    const name = (o.private ? o.title : o.retailer || o.title) || "Parcel";
     out.push({
       star: o.status === "problem",
-      name: (o.private ? o.title : o.retailer || o.title) || "Parcel",
+      name,
       long: eta ? `${label} · ${eta}` : label,
       short: SHORT[o.status] || label,
+      lock: `${name} · ${SHORT[o.status] || label}`,
       rank: o.status === "problem" ? 0 : (PARCEL_RANK[o.status] || 6),
       when: new Date(o.last_event).getTime() || 0,
       done: isDelivered(o),
     });
   }
   for (const i of data.important) {
-    const name = [i.from, i.subject].filter(Boolean).join(" · ");
     out.push({
-      star: !!i.urgent, name, long: "Email", short: "",
+      star: !!i.urgent, name: i.subject || i.from || "", long: i.from || "Email", short: "",
+      lock: [i.from, i.subject].filter(Boolean).join(" · "),
       rank: i.urgent ? 0 : i.action_needed ? 2 : 6,
       when: new Date(i.received).getTime() || 0, done: false,
     });
@@ -134,27 +145,29 @@ function buildWidget(data) {
   const shown = more ? list.slice(0, Math.max(1, rows - 1)) : list;
   const right = it => (small ? it.short : it.long);
   // the status column is as wide as its longest text; the name gets the rest and shrinks or cuts off
-  const rightW = Math.min(Math.floor(innerW * 0.6), Math.ceil(Math.max(0, ...shown.map(it => right(it).length)) * CHAR_W) + 2);
+  const rightW = Math.min(Math.floor(innerW * 0.5), Math.ceil(Math.max(0, ...shown.map(it => right(it).length)) * CHAR_W) + 2);
 
   S.header(w, innerW, TITLE, headRight(data, small));
   if (!list.length) S.row(w, innerW, [{ text: "Nothing going on" }]);
+  // medium and large: star, time or date, text, status. small: no time, a short status.
+  const lead = small ? STAR_W : STAR_W + WHEN_W;
   shown.forEach((it, i) => {
     if (i > 0) w.addSpacer(S.ROW_GAP);
-    S.row(w, innerW, [
-      { text: (it.star ? "★ " : "") + it.name, w: innerW - rightW },
-      { text: right(it), w: rightW, right: true },
-    ]);
+    const cells = [{ text: it.star ? "★" : "", w: STAR_W }];
+    if (!small) cells.push({ text: whenText(it.when), w: WHEN_W, mono: true });
+    cells.push({ text: it.name, w: innerW - lead - rightW }, { text: right(it), w: rightW, right: true });
+    S.row(w, innerW, cells);
   });
   if (more && rows > 1) {
     w.addSpacer(S.ROW_GAP);
-    S.row(w, innerW, [{ text: `+${list.length - shown.length} more` }]);
+    S.row(w, innerW, [{ text: "", w: STAR_W }, { text: `+${list.length - shown.length} more` }]);
   }
   return S.finish(w);
 }
 
 // ---- Lock Screen ----
 function lockLine(it) {
-  return `${it.star ? "★ " : ""}${it.name}${it.short ? " · " + it.short : ""}`;
+  return `${it.star ? "★ " : ""}${it.lock}`;
 }
 function lockLines(data, max) {
   if (data.error) return [data.error];
