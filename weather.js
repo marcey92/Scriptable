@@ -7,6 +7,7 @@ const UNITS = "celsius";    // or "fahrenheit"
 const TIME_W = 52;          // same time column as the calendar
 const TEMP_W = 34;
 const RAIN_W = 34;
+const TAP_URL = "weather://";   // tapping the widget opens Apple's Weather app
 
 // ---- cache: last known place and forecast, so the widget still draws offline ----
 const fm = FileManager.local();
@@ -161,6 +162,7 @@ const widget = family === "accessoryRectangular" ? buildLockRect(data)
   : family === "accessoryInline" ? S.lockInline(nowLine(data))
   : buildWidget(data);
 S.refresh(widget);
+if (TAP_URL) widget.url = TAP_URL;
 
 if (config.runsInWidget) Script.setWidget(widget);
 else await widget.presentMedium();   // preview when run inside the app
