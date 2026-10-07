@@ -284,7 +284,12 @@ async function run(file, opts = {}) {
   const savedCache2 = files["/docs/swiss-orders.json"];
   await run("orders.js", { token: "tok", feeds: nowFeed, family: "medium", expect: {
     "items keep Hermes's order": ({ text }) => text.indexOf("Older first") < text.indexOf("Homes & Villas") && text.indexOf("Homes & Villas") < text.indexOf("Amazon"),
-    "title then detail on the right": ({ text }) => /★ Homes & Villas\s+Reply to your complaint/.test(text),
+    "title, then detail in its own column": ({ text }) => /★ Homes & Villas\s+Reply to your complaint/.test(text),
+    "detail is its own left-aligned column, starting at the same place on every row": ({ widget }) => {
+      const rows = widget.children.filter(c => c.children && c.children.length === 3 && c.size && c.size.height === 14);
+      const titleWs = new Set(rows.map(r => r.children[1].size.width));
+      return rows.length === 5 && titleWs.size === 1 && rows.every(r => r.children[2].children[0].text !== undefined);
+    },
     "a starred item below the fold takes the bottom row": ({ text }) => /★ Council/.test(text.split("\n").pop()),
   }, note: "now feed" });
   await run("orders.js", { token: "tok", feeds: nowFeed, family: "small", expect: {
