@@ -10,7 +10,9 @@ const BASE = "https://misc.mrdrr.uk/widget/api/";
 const KEY = "misc-widget-read-token";   // the read token lives in the Keychain, never in this file
 const TITLE = "Now";
 const HIDE_DELIVERED_AFTER_H = 48;
-const CHAR_W = 6.4;         // average width of one character at the row text size, to size the status column
+const CHAR_W = 6.4;         // average width of one character at the row text size, to size the title column
+const TITLE_MAX = 0.45;     // the title column never takes more than this share of the row after the time
+const COL_GAP = 10;         // space between the title and detail columns
 
 // ---- cache: the last good copy of both feeds, so the widget still draws when the server can't be reached ----
 const fm = FileManager.local();
@@ -182,16 +184,18 @@ function drawRows(w, innerW, rows, data, small = false) {
   }
   const list = items(data);
   const shown = pick(list, rows);
-  const right = it => (small ? it.short : it.long);
-  // the status column is as wide as its longest text; the name gets the rest and is cut off with "…"
-  const rightW = Math.min(Math.floor(innerW * 0.5), Math.ceil(Math.max(0, ...shown.map(it => right(it).length)) * CHAR_W) + 2);
-  if (!list.length) S.row(w, innerW, [{ text: "Nothing going on" }]);
+  const detail = it => (small ? it.short : it.long);
+  const title = it => (it.star ? "★ " : "") + it.name;
+  // three columns: time, title, detail. The title column is as wide as the longest title shown (up to
+  // TITLE_MAX of the space after the time), so every detail starts at the same place; text is cut off with "…"
   const lead = small ? 0 : S.TIME_W;
+  const titleW = Math.min(Math.floor((innerW - lead) * TITLE_MAX), Math.ceil(Math.max(0, ...shown.map(it => title(it).length)) * CHAR_W) + COL_GAP);
+  if (!list.length) S.row(w, innerW, [{ text: "Nothing going on" }]);
   shown.forEach((it, i) => {
     if (i > 0) w.addSpacer(S.ROW_GAP);
     const cells = [];
     if (!small) cells.push({ text: whenText(it.when), w: S.TIME_W, mono: true });
-    cells.push({ text: (it.star ? "★ " : "") + it.name, w: innerW - lead - rightW }, { text: right(it), w: rightW, right: true });
+    cells.push({ text: title(it), w: titleW }, { text: detail(it), w: innerW - lead - titleW });
     S.row(w, innerW, cells);
   });
 }
