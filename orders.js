@@ -142,8 +142,7 @@ function buildWidget(data) {
 
   const list = items(data);
   const rows = S.rowsFor(availH, 1);
-  const more = list.length > rows;
-  const shown = more ? list.slice(0, Math.max(1, rows - 1)) : list;
+  const shown = list.slice(0, rows);
   const right = it => (small ? it.short : it.long);
   // the status column is as wide as its longest text; the name gets the rest and shrinks or cuts off
   const rightW = Math.min(Math.floor(innerW * 0.5), Math.ceil(Math.max(0, ...shown.map(it => right(it).length)) * CHAR_W) + 2);
@@ -159,10 +158,6 @@ function buildWidget(data) {
     cells.push({ text: (it.star ? "★ " : "") + it.name, w: innerW - lead - rightW }, { text: right(it), w: rightW, right: true });
     S.row(w, innerW, cells);
   });
-  if (more && rows > 1) {
-    w.addSpacer(S.ROW_GAP);
-    S.row(w, innerW, [{ text: `+${list.length - shown.length} more` }]);
-  }
   return S.finish(w);
 }
 
