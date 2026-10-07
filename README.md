@@ -8,7 +8,7 @@ Scriptable widgets for iOS in one fixed style: a title, a hairline rule, then ro
 | `calendar-list.js` | The next days that have events | Small, medium, large, Lock Screen |
 | `battery.js` | Charge as a figure and a bar of boxes | Small, medium, Lock Screen |
 | `weather.js` | Hours, temperature, conditions, rain chance | Small, medium, large, Lock Screen |
-| `orders.js` | "Now": one list of parcels and important emails, urgent ones starred (from the misc server) | Small, medium, large, Lock Screen |
+| `orders.js` | "Now": one list of parcels and important emails, urgent ones get a ★ (from the misc server) | Small, medium, large, Lock Screen |
 | `swiss.js` | The shared style. Not a widget; the others load it | |
 | `update.js` | Pulls the latest scripts from this repo | Run in the app |
 
@@ -32,7 +32,7 @@ After that, run `update.js` to pull changes from GitHub. For a private repo, put
 1. Run `orders.js` inside Scriptable once. It asks for the read token and stores it. If the server rejects the token it asks again.
 2. Add a Scriptable widget and pick `orders.js`.
 
-It shows one line per item: a parcel as retailer (or a private order's generic title) and status, an email as sender and subject. Urgent emails and problem parcels get a red ★. It never shows tracking numbers or email summaries. Things that need you come first, then parcels by how close they are, then emails; if they don't all fit the last line says "+N more". If the server can't be reached it draws the last good copy with a "stale HH:MM" marker. The star uses the one accent colour, `S.ALERT`.
+It shows one line per item: a parcel as retailer (or a private order's generic title) and status, an email as sender and subject. Urgent emails and problem parcels get a ★. It never shows tracking numbers or email summaries. Things that need you come first, then parcels by how close they are, then emails; if they don't all fit the last line says "+N more". If the server can't be reached it draws the last good copy with a "stale HH:MM" marker. It stays white on navy like the rest, with no colour.
 
 ## Google Calendar
 
