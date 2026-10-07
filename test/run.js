@@ -226,6 +226,7 @@ async function run(file, opts = {}) {
   const clean = ({ text }) => !/SECRET/.test(text);
   for (const family of [...home, ...lock]) await run("orders.js", { ...widgetOpts, family, expect: { "no tracking numbers or email bodies": clean } });
   await run("orders.js", { ...widgetOpts, family: "medium", expect: {
+    "no date in the header": ({ text }) => !/\d\d\.\d\d \w{3}/.test(text.split("\n")[0]),
     "one list: titled Now, no Orders or Important sections": ({ text }) => text.includes("Now") && !text.includes("Important") && !text.includes("Orders"),
     "urgent email and problem parcel come first, with stars": ({ text }) => /★.*Boiler/.test(text) && /★.*Parcel/.test(text) && text.indexOf("Boiler") < text.indexOf("Zalando") && text.indexOf("Parcel") < text.indexOf("Zalando"),
     "out for delivery before ordered": ({ text }) => text.indexOf("Zalando") < (text.indexOf("Amazon") === -1 ? 1e9 : text.indexOf("Amazon")),
@@ -239,8 +240,9 @@ async function run(file, opts = {}) {
     "ordered sorts after out for delivery": ({ text }) => text.indexOf("Zalando") < text.indexOf("Amazon"),
     "recent delivered is shown, last": ({ text }) => text.includes("Apple") && text.indexOf("Apple") > text.indexOf("Amazon"),
     "delivered older than 48h is hidden": ({ text }) => !text.includes("IKEA"),
-    "yesterday shows Yest": ({ text }) => /Yest\s+Review your statement/.test(text),
+    "yesterday shows Yest": ({ text }) => /Yest\s+★ Review your statement/.test(text),
     "older than yesterday shows the date": ({ text }) => { const d = new Date(Date.now() - 48 * 3600 * 1000); return new RegExp(`${String(d.getDate()).padStart(2, "0")}\\.${String(d.getMonth() + 1).padStart(2, "0")}\\s+Amazon`).test(text); },
+    "every important email is starred": ({ text }) => /★ Boiler/.test(text) && /★ Review your statement/.test(text),
     "nothing is cut off on the large widget": ({ text }) => !/more/.test(text),
   }, note: "hide old delivered" });
   await run("orders.js", { ...widgetOpts, family: "medium", offline: true, expect: {
