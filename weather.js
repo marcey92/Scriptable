@@ -4,7 +4,6 @@ const TITLE = "Weather";
 const PLACE = null;         // fixed place, e.g. { name: "London", lat: 51.5072, lon: -0.1276 }; null = where you are
 const STEP = 3;             // hours between rows
 const UNITS = "celsius";    // or "fahrenheit"
-const TIME_W = 52;          // same time column as the calendar
 const TEMP_W = 34;
 const RAIN_W = 40;
 const TAP_URL = "weather://";   // tapping the widget opens Apple's Weather app
@@ -121,7 +120,7 @@ function buildWidget(data) {
   rows.forEach((r, i) => {
     if (i > 0) w.addSpacer(S.ROW_GAP);
     S.row(w, innerW, [
-      { text: r.label, w: TIME_W, mono: true },
+      { text: r.label, w: S.TIME_W, mono: true },
       { text: deg(r.temp), w: TEMP_W, mono: true },
       { text: small ? "" : words(r.code) },
       { text: pct(r.rain), w: RAIN_W, mono: true, right: true },

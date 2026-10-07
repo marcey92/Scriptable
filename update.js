@@ -7,7 +7,7 @@ const TOKEN = "";   // leave empty for a public repo; a private repo needs a rea
 // Used only if files.json can't be fetched. The real list lives in files.json in the repo, so adding a
 // widget never means editing this script. This script does not update itself: overwriting the file
 // that is running makes Scriptable create a duplicate. Paste a new copy by hand if this file changes.
-const FALLBACK_FILES = ["swiss.js", "habit-grid.js", "calendar-list.js", "battery.js", "weather.js", "orders.js"];
+const FALLBACK_FILES = ["swiss.js", "lib-calendar.js", "lib-habits.js", "lib-now.js", "habit-grid.js", "calendar-list.js", "battery.js", "weather.js", "orders.js", "overview.js"];
 
 let fm;
 try { fm = FileManager.iCloud(); fm.documentsDirectory(); }

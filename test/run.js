@@ -273,6 +273,23 @@ async function run(file, opts = {}) {
     "wrong token can be replaced in the app": ({ keychainSet }) => keychainSet === "tok",
   }, note: "wrong token, re-enter" });
 
+  for (const family of ["large", "medium", "accessoryInline"]) await run("overview.js", { ...widgetOpts, family });
+  await run("overview.js", { ...widgetOpts, family: "large", expect: {
+    "three sections: day, habits, now": ({ text }) => /^Today/m.test(text) && /^Habits/m.test(text) && /^Now/m.test(text),
+    "habit rows are drawn": ({ text }) => /^Anki/m.test(text) && /^Gratitude/m.test(text),
+    "calendar rows are drawn": ({ text }) => text.includes("Late dinner"),
+    "now rows are drawn": ({ text }) => text.includes("★ Parcel"),
+    "calendar takes at most half the shared rows": ({ text }) => !text.includes("Brunch"),
+  }, note: "contents" });
+  await run("overview.js", { ...widgetOpts, family: "large", events: [], expect: {
+    "an empty week still leaves Now its rows": ({ text }) => text.includes("Nothing this week") && text.includes("Zalando") && text.includes("Amazon"),
+  }, note: "empty calendar" });
+  await run("overview.js", { ...widgetOpts, inApp: true, note: "preview" });
+  const before = files["/docs/habit-grid.json"];
+  await run("overview.js", { ...widgetOpts, inApp: true, query: { habit: "Meditate" }, expect: {
+    "tapping a habit row ticks it": ({ files }) => JSON.parse(files["/docs/habit-grid.json"]).Meditate.includes(new Date().toISOString().slice(0, 10)) !== JSON.parse(before).Meditate?.includes(new Date().toISOString().slice(0, 10)),
+  }, note: "one-tap" });
+
   await run("update.js", { inApp: true });
 
   console.log(`\n${failures ? failures + " failing" : "all passing"}`);
