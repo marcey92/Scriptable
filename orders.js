@@ -9,6 +9,7 @@ const BASE = "https://misc.mrdrr.uk/widget/api/";
 const KEY = "misc-widget-read-token";   // the read token lives in the Keychain, never in this file
 const TITLE = "Now";
 const HIDE_DELIVERED_AFTER_H = 48;
+const GAP = 4;              // gap between rows: 5 rows on small and medium instead of 4
 const CHAR_W = 6.4;         // average width of one character at the row text size, to size the status column
 const WHEN_W = 44;          // time column, as wide as the one in the weather and calendar widgets
 
@@ -71,9 +72,6 @@ async function load(token) {
 }
 
 // ---- what to show: one list of everything going on ----
-// rank: lower comes first. Urgent emails and problem parcels, then important emails and parcels out for
-// delivery (newest first), then the other parcels by how close they are.
-const PARCEL_RANK = { out_for_delivery: 1, with_courier: 3, dispatched: 4, ordered: 5, delivered: 7 };
 const SHORT = { out_for_delivery: "Today", with_courier: "Courier", dispatched: "Sent", ordered: "Ordered", problem: "Problem", delivered: "Done" };
 
 // eta is a date or a range "YYYY-MM-DD/YYYY-MM-DD"; show the latest day as DD.MM
@@ -93,7 +91,7 @@ function whenText(ms) {
   return `${S.p(d.getDate())}.${S.p(d.getMonth() + 1)}`;
 }
 
-// parcels and emails as the same kind of item: { star, name, long, short, lock, rank, when }
+// parcels and emails as the same kind of item, newest first: { star, name, long, short, lock, when }
 function items(data) {
   const cutoff = Date.now() - HIDE_DELIVERED_AFTER_H * 3600 * 1000;
   const out = [];
@@ -108,7 +106,6 @@ function items(data) {
       long: eta ? `${label} · ${eta}` : label,
       short: SHORT[o.status] || label,
       lock: `${name} · ${SHORT[o.status] || label}`,
-      rank: o.status === "problem" ? 0 : (PARCEL_RANK[o.status] || 6),
       when: new Date(o.last_event).getTime() || 0,
       done: isDelivered(o),
     });
@@ -117,11 +114,22 @@ function items(data) {
     out.push({
       star: true, name: i.from || "Email", long: i.subject || "", short: "",
       lock: [i.from, i.subject].filter(Boolean).join(" · "),
-      rank: i.urgent ? 0 : 1,
       when: new Date(i.received).getTime() || 0, done: false,
     });
   }
-  return out.sort((a, b) => a.rank - b.rank || b.when - a.when);
+  return out.sort((a, b) => b.when - a.when);
+}
+
+// the newest `n` items, except that a starred item never drops off: any that are too old to fit
+// replace the oldest unstarred ones at the bottom (so the list stays newest first)
+function pick(list, n) {
+  const top = list.slice(0, n);
+  const missing = list.slice(n).filter(it => it.star);
+  if (!missing.length) return top;
+  const keep = Math.max(0, n - missing.length);
+  const plain = top.filter(it => !it.star);
+  const drop = new Set(plain.slice(Math.max(0, plain.length - (n - keep))));
+  return [...top.filter(it => !drop.has(it)), ...missing].slice(0, n);
 }
 
 // right-hand header text: nothing, unless the data is old, then the time it was last fetched
@@ -141,8 +149,8 @@ function buildWidget(data) {
   }
 
   const list = items(data);
-  const rows = S.rowsFor(availH, 1);
-  const shown = list.slice(0, rows);
+  const rows = Math.floor((availH - S.HEAD_H + GAP) / (S.ROW + GAP));   // a tighter gap than the shared grid fits one more row
+  const shown = pick(list, rows);
   const right = it => (small ? it.short : it.long);
   // the status column is as wide as its longest text; the name gets the rest and shrinks or cuts off
   const rightW = Math.min(Math.floor(innerW * 0.5), Math.ceil(Math.max(0, ...shown.map(it => right(it).length)) * CHAR_W) + 2);
@@ -152,7 +160,7 @@ function buildWidget(data) {
   // medium and large: time or date, text (starred ones begin with ★), status. small: no time, a short status.
   const lead = small ? 0 : WHEN_W;
   shown.forEach((it, i) => {
-    if (i > 0) w.addSpacer(S.ROW_GAP);
+    if (i > 0) w.addSpacer(GAP);
     const cells = [];
     if (!small) cells.push({ text: whenText(it.when), w: WHEN_W, mono: true });
     cells.push({ text: (it.star ? "★ " : "") + it.name, w: innerW - lead - rightW }, { text: right(it), w: rightW, right: true });
@@ -167,7 +175,7 @@ function lockLine(it) {
 }
 function lockLines(data, max) {
   if (data.error) return [data.error];
-  const lines = items(data).slice(0, max).map(lockLine);
+  const lines = pick(items(data), max).map(lockLine);
   return lines.length ? lines : ["Nothing going on"];
 }
 function buildLockRect(data) {
