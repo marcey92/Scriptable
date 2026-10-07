@@ -1,1 +1,1 @@
-{ "files": ["swiss.js", "habit-grid.js", "calendar-list.js", "battery.js", "weather.js", "orders.js"] }
+{ "files": ["swiss.js", "lib-calendar.js", "lib-habits.js", "lib-now.js", "habit-grid.js", "calendar-list.js", "battery.js", "weather.js", "orders.js", "overview.js"] }
