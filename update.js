@@ -13,8 +13,19 @@ let fm;
 try { fm = FileManager.iCloud(); fm.documentsDirectory(); }
 catch (e) { fm = FileManager.local(); }
 
-const base = `https://raw.githubusercontent.com/${USER}/${REPO}/${BRANCH}/`;
 const report = [];
+
+// Download from the branch's latest commit, not the branch name: GitHub caches files fetched by branch
+// name for up to 5 minutes, so an update right after a change could get the old version. A commit's
+// files never change, so they are never stale. Falls back to the branch name if GitHub can't be asked.
+let ref = BRANCH, sha = "";
+try {
+  const req = new Request(`https://api.github.com/repos/${USER}/${REPO}/commits/${BRANCH}`);
+  req.headers = TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {};
+  const json = await req.loadJSON();
+  if (json && /^[0-9a-f]{40}$/.test(json.sha || "")) { ref = json.sha; sha = json.sha.slice(0, 7); }
+} catch (e) {}
+const base = `https://raw.githubusercontent.com/${USER}/${REPO}/${ref}/`;
 
 let FILES = FALLBACK_FILES;
 try {
@@ -50,7 +61,7 @@ for (const f of FILES) {
 }
 
 const a = new Alert();
-a.title = "Swiss widgets";
+a.title = sha ? `Swiss widgets · ${sha}` : "Swiss widgets (latest commit unknown)";
 a.message = report.join("\n");
 a.addAction("OK");
 await a.present();
