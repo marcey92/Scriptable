@@ -93,12 +93,6 @@ function upcomingLines(result) {
   return out;
 }
 
-// right-hand text of a day heading in the overview: "Wed 07.10" when the title is Today or Tomorrow,
-// just "13.10" when the title already names the weekday
-function dayRight(offset, d) {
-  return offset <= 1 ? S.dateLabel(d) : S.dayMonth(d);
-}
-
 // height of each kind of line: an event row, and a later day's heading (a section gap, then a header)
 const EVENT_H = S.ROW, DAY_H = S.SECTION_GAP + S.HEAD_H;
 
@@ -127,7 +121,7 @@ function drawUpcoming(w, innerW, maxH, result, label) {
   fitLines(result, maxH).lines.forEach((l, i, all) => {
     if (l.day) {
       w.addSpacer(S.SECTION_GAP);
-      S.header(w, innerW, dayTitle(l.day.offset, l.day.date, label), dayRight(l.day.offset, l.day.date));
+      S.header(w, innerW, dayTitle(l.day.offset, l.day.date, label), S.dayMonth(l.day.date));
       return;
     }
     if (i > 0 && !all[i - 1].day) w.addSpacer(S.ROW_GAP);
@@ -161,4 +155,4 @@ function buildLockRect(result) {
   return w;
 }
 
-module.exports = { loadDays, dayTitle, dayRight, fitLines, drawUpcoming, buildWidget, buildLockRect, lockLines };
+module.exports = { loadDays, dayTitle, fitLines, drawUpcoming, buildWidget, buildLockRect, lockLines };
