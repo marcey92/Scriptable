@@ -234,7 +234,7 @@ async function run(file, opts = {}) {
     "private order shows its generic title, not the retailer": ({ text }) => !/^X$/m.test(text) && text.includes("Parcel"),
     "emails show the subject, with the sender on the right": ({ text }) => /Boiler repair today\s+Landlord/.test(text),
     "today shows a time": ({ text }) => /\d\d:\d\d\s+Zalando/.test(text),
-    "overflow becomes a +N more line": ({ text }) => /\+\d+ more/.test(text),
+    "every row shows an item, no +N more line": ({ text }) => !/more/.test(text) && text.split("\n").filter(l => /^\s*(\d\d:\d\d|Yest|\d\d\.\d\d)/.test(l)).length === 4,
   }, note: "one list" });
   await run("orders.js", { ...widgetOpts, family: "large", expect: {
     "ordered sorts after out for delivery": ({ text }) => text.indexOf("Zalando") < text.indexOf("Amazon"),
