@@ -303,6 +303,7 @@ async function run(file, opts = {}) {
   for (const family of ["large", "medium", "accessoryInline"]) await run("overview.js", { ...widgetOpts, family });
   await run("overview.js", { ...widgetOpts, family: "large", expect: {
     "three sections in order: habits, calendar, inbox": ({ text }) => { const l = text.split("\n"); const h = l.findIndex(x => /^Habits/.test(x)), c = l.findIndex(x => /^Today/.test(x)), i = l.findIndex(x => /^Inbox/.test(x)); return h === 0 && h < c && c < i; },
+    "Today and Tomorrow headings have the weekday before the date": ({ text }) => /^Today\s+[A-Z][a-z]{2} \d\d\.\d\d$/m.test(text) && /^Tomorrow\s+[A-Z][a-z]{2} \d\d\.\d\d$/m.test(text),
     "habits header shows the next event today, like the habit widget": ({ text }) => /^Habits\s+Late dinner/m.test(text),
     "habit rows are drawn": ({ text }) => /^Anki/m.test(text) && /^Gratitude/m.test(text),
     "calendar rows are drawn": ({ text }) => text.includes("Late dinner"),
