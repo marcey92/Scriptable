@@ -118,12 +118,6 @@ function drawRows(w, innerW, cell, data, runURL) {
   });
 }
 
-// ticked today, e.g. "2/4"
-function todayCount(data) {
-  const today = new Date();
-  return `${HABITS.filter(h => isDone(data, h, today)).length}/${HABITS.length}`;
-}
-
 // ---- Lock Screen widgets ----
 // rectangular: one row per habit, no names, today set apart on the right
 function buildLockRect(data) {
@@ -177,4 +171,4 @@ function buildLockInline(data) {
   return S.lockInline(`${TITLE} ${done}/${HABITS.length}`);
 }
 
-module.exports = { HABITS, load, toggle, menu, nextEvent, drawRows, todayCount, buildWidget, buildLockRect, buildLockCircle, buildLockInline };
+module.exports = { HABITS, load, toggle, menu, nextEvent, drawRows, buildWidget, buildLockRect, buildLockCircle, buildLockInline };
