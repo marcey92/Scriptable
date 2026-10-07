@@ -153,6 +153,32 @@ S.lockHeader = (w, width, titleText) => {
   w.addSpacer(5);
 };
 
+// one row of columns under a lockHeader, `width` wide: cells are { text, w, mono, right }; one cell
+// without a width takes the rest. Same size as the header title, so it reads as one block.
+S.LOCK_ROW = 12;
+S.lockRow = (w, width, cells) => {
+  const outer = w.addStack();
+  const row = outer.addStack(); row.size = new Size(width, S.LOCK_ROW); row.centerAlignContent();
+  for (const c of cells) {
+    const put = parent => {
+      const t = parent.addText(String(c.text)); t.lineLimit = 1;
+      t.font = c.mono ? Font.regularMonospacedSystemFont(11) : Font.mediumSystemFont(11);
+      t.textColor = S.LOCK_ON;
+    };
+    if (c.w) {
+      const col = row.addStack(); col.size = new Size(c.w, S.LOCK_ROW); col.centerAlignContent();
+      if (c.right) col.addSpacer();
+      put(col);
+      if (!c.right) col.addSpacer();
+    } else {
+      put(row);
+      row.addSpacer();
+    }
+  }
+  outer.addSpacer();
+  return row;
+};
+
 // plain text line for the rectangular slot
 S.lockText = (w, text) => {
   const t = w.addText(text); t.lineLimit = 1;
