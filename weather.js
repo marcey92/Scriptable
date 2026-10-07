@@ -130,24 +130,29 @@ function buildWidget(data) {
 }
 
 // ---- Lock Screen ----
-// rectangular: styled like the habit grid, a small title and rule, then three rows of columns
-const LOCK_TIME_W = 34, LOCK_TEMP_W = 26, LOCK_RAIN_W = 28;
+// rectangular: styled like the habit grid, a small title and rule, then three short lines of natural
+// width (no fixed columns: the Lock Screen draws text larger than the Home Screen, so columns overflow)
+const LOCK_HOURS = 12;   // lines 2 and 3 look this far ahead
+const RAIN_FROM = 30;    // a rain chance from this % up is worth naming
+function lockSummary(hours) {
+  const now = Date.now();
+  const next = hours.filter(h => h.t + 3600 * 1000 > now).slice(0, LOCK_HOURS);
+  if (!next.length) return ["No forecast available"];
+  const temps = next.map(h => h.temp);
+  const wet = next.reduce((best, h) => ((h.rain || 0) > (best.rain || 0) ? h : best), next[0]);
+  return [
+    [deg(next[0].temp), words(next[0].code)].filter(Boolean).join("  "),
+    `Low ${deg(Math.min(...temps))} · High ${deg(Math.max(...temps))}`,
+    (wet.rain || 0) >= RAIN_FROM ? `Rain ${pct(wet.rain)} at ${S.timeLabel(new Date(wet.t))}` : `Dry next ${LOCK_HOURS} hours`,
+  ];
+}
 function buildLockRect(data) {
   const w = S.lockWidget();
   S.lockHeader(w, S.LOCK_W, TITLE);
-  if (data.error) {
-    S.lockRow(w, S.LOCK_W, [{ text: data.error }]);
-  } else {
-    pick(data.hours, 3).forEach((r, i) => {
-      if (i > 0) w.addSpacer(2);
-      S.lockRow(w, S.LOCK_W, [
-        { text: r.label, w: LOCK_TIME_W, mono: true },
-        { text: deg(r.temp), w: LOCK_TEMP_W, mono: true },
-        { text: words(r.code) },
-        { text: pct(r.rain), w: LOCK_RAIN_W, mono: true, right: true },
-      ]);
-    });
-  }
+  (data.error ? [data.error] : lockSummary(data.hours)).forEach((text, i) => {
+    if (i > 0) w.addSpacer(2);
+    S.lockRow(w, S.LOCK_W, [{ text }]);
+  });
   w.addSpacer();
   return w;
 }
