@@ -1,9 +1,10 @@
 const S = importModule("swiss");
 
-const HABITS = ["Anki", "Cold shower", "Meditate"];
+const HABITS = ["Anki", "Cold shower", "Meditate", "Gratitude"];
 const TITLE = "Habits";
 const LOCK_TITLE = true;  // title and rule above the Lock Screen grid
 const SHOW_EVENT = true;  // next calendar event in the header (falls back to date)
+const LOCK_H = 66;         // usable height of the rectangular Lock Screen slot
 const NAME_W = 84;        // width of the habit-name column
 const COUNT_W = 18;       // width of the count column
 
@@ -114,7 +115,11 @@ function buildWidget(data, eventTitle) {
 // rectangular: one row per habit, no names, today set apart on the right
 function buildLockRect(data) {
   const w = S.lockWidget();
-  const box = S.LOCK_BOX, gap = S.BOX_GAP, todayGap = 7, rowGap = LOCK_TITLE ? 4 : 5;
+  // shrink the boxes when there are more habits, so every row fits the slot
+  const gap = S.BOX_GAP, todayGap = 7, n = HABITS.length;
+  const rowGap = LOCK_TITLE || n > 3 ? 3 : 5;
+  const roomH = LOCK_H - (LOCK_TITLE ? 22 : 0) - (n - 1) * rowGap;
+  const box = Math.max(5, Math.min(S.LOCK_BOX, Math.floor(roomH / n)));
   const past = Math.max(1, Math.floor((S.LOCK_W - box - todayGap + gap) / (box + gap)));
   const days = lastDays(past + 1);
   const today = days.pop();
