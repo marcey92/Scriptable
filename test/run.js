@@ -211,14 +211,14 @@ async function run(file, opts = {}) {
   const iso = h => new Date(Date.now() - h * 3600 * 1000).toISOString();
   const feeds = {
     orders: { schema_version: 1, updated: iso(0), orders: [
-      { id: "1", retailer: "Amazon", title: "Kettle", private: false, status: "ordered", status_label: "Ordered", eta: "2026-10-12", tracking_number: "TRK-SECRET-1", last_event: iso(30), delivered: false },
+      { id: "1", retailer: "Amazon", title: "Kettle", private: false, status: "ordered", status_label: "Ordered", eta: "2026-10-12", tracking_number: "TRK-SECRET-1", last_event: iso(48), delivered: false },
       { id: "2", retailer: "Zalando", title: "Shoes", private: false, status: "out_for_delivery", status_label: "Out for delivery", eta: "2026-10-08/2026-10-09", tracking_number: "TRK-SECRET-2", last_event: iso(0), delivered: false },
       { id: "3", retailer: "X", title: "Parcel", private: true, status: "problem", status_label: "Delivery problem", eta: null, tracking_number: null, last_event: iso(3), delivered: false },
       { id: "4", retailer: "IKEA", title: "Shelf", private: false, status: "delivered", status_label: "Delivered", eta: null, tracking_number: null, last_event: iso(60), delivered: true },
       { id: "5", retailer: "Apple", title: "Cable", private: false, status: "delivered", status_label: "Delivered", eta: null, tracking_number: null, last_event: iso(10), delivered: true },
     ] },
     important: { schema_version: 1, updated: iso(0), important: [
-      { id: "a", from: "Bank", subject: "Review your statement", summary: "BODY-SECRET-A", received: iso(1), urgent: false, action_needed: true },
+      { id: "a", from: "Bank", subject: "Review your statement", summary: "BODY-SECRET-A", received: iso(24), urgent: false, action_needed: true },
       { id: "b", from: "Landlord", subject: "Boiler repair today", summary: "BODY-SECRET-B", received: iso(9), urgent: true, action_needed: true },
     ] },
   };
@@ -239,7 +239,8 @@ async function run(file, opts = {}) {
     "ordered sorts after out for delivery": ({ text }) => text.indexOf("Zalando") < text.indexOf("Amazon"),
     "recent delivered is shown, last": ({ text }) => text.includes("Apple") && text.indexOf("Apple") > text.indexOf("Amazon"),
     "delivered older than 48h is hidden": ({ text }) => !text.includes("IKEA"),
-    "older than today shows the date": ({ text }) => { const d = new Date(Date.now() - 30 * 3600 * 1000); return new RegExp(`${String(d.getDate()).padStart(2, "0")}\\.${String(d.getMonth() + 1).padStart(2, "0")}\\s+Amazon`).test(text); },
+    "yesterday shows Yest": ({ text }) => /Yest\s+Review your statement/.test(text),
+    "older than yesterday shows the date": ({ text }) => { const d = new Date(Date.now() - 48 * 3600 * 1000); return new RegExp(`${String(d.getDate()).padStart(2, "0")}\\.${String(d.getMonth() + 1).padStart(2, "0")}\\s+Amazon`).test(text); },
     "nothing is cut off on the large widget": ({ text }) => !/more/.test(text),
   }, note: "hide old delivered" });
   await run("orders.js", { ...widgetOpts, family: "medium", offline: true, expect: {
