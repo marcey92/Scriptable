@@ -115,7 +115,7 @@ function items(data) {
   }
   for (const i of data.important) {
     out.push({
-      star: true, name: i.subject || i.from || "", long: i.from || "Email", short: "",
+      star: true, name: i.from || "Email", long: i.subject || "", short: "",
       lock: [i.from, i.subject].filter(Boolean).join(" · "),
       rank: i.urgent ? 0 : 1,
       when: new Date(i.received).getTime() || 0, done: false,
