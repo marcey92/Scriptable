@@ -35,7 +35,7 @@ function build(cal, habits, now, eventTitle) {
 
   w.addSpacer(S.SECTION_GAP);
   const first = (cal.days || [])[0];
-  S.header(w, innerW, first ? C.dayTitle(first.offset, first.date, "") : "Today", S.dayMonth(first ? first.date : new Date()));
+  S.header(w, innerW, first ? C.dayTitle(first.offset, first.date, "") : "Today", first ? C.dayRight(first.offset, first.date) : S.dateLabel());
   C.drawUpcoming(w, innerW, calH, cal, "");
 
   w.addSpacer(S.SECTION_GAP);
