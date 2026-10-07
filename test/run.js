@@ -171,7 +171,7 @@ async function run(file, opts = {}) {
     if (widget) for (const c of widget.children) { const d = describe(c); if (d) console.log("     " + d); }
     if (opts.inApp) console.log(`     (alerts shown: ${alerts})`);
     if (opts.expect) for (const [what, fn] of Object.entries(opts.expect)) {
-      if (!fn({ widget, text: widget ? widget.children.map(describe).filter(Boolean).join("\n") : "", keychainSet, files })) issues.push(`expected: ${what}`);
+      if (!fn({ widget, text: widget ? widget.children.map(describe).filter(Boolean).join("\n") : "", keychainSet, files, alerts })) issues.push(`expected: ${what}`);
     }
     issues.forEach(i => console.log("     ! " + i));
     failures += issues.length ? 1 : 0;
@@ -302,7 +302,8 @@ async function run(file, opts = {}) {
 
   for (const family of ["large", "medium", "accessoryInline"]) await run("overview.js", { ...widgetOpts, family });
   await run("overview.js", { ...widgetOpts, family: "large", expect: {
-    "three sections: day, habits, inbox": ({ text }) => /^Today/m.test(text) && /^Habits/m.test(text) && /^Inbox/m.test(text),
+    "three sections in order: habits, calendar, inbox": ({ text }) => { const l = text.split("\n"); const h = l.findIndex(x => /^Habits/.test(x)), c = l.findIndex(x => /^Today/.test(x)), i = l.findIndex(x => /^Inbox/.test(x)); return h === 0 && h < c && c < i; },
+    "habits header shows the next event today, like the habit widget": ({ text }) => /^Habits\s+Late dinner/m.test(text),
     "habit rows are drawn": ({ text }) => /^Anki/m.test(text) && /^Gratitude/m.test(text),
     "calendar rows are drawn": ({ text }) => text.includes("Late dinner"),
     "now rows are drawn": ({ text }) => text.includes("★ Parcel"),
@@ -313,6 +314,9 @@ async function run(file, opts = {}) {
     "an empty week still leaves Now its rows": ({ text }) => text.includes("Nothing this week") && text.includes("Zalando") && text.includes("Amazon"),
   }, note: "empty calendar" });
   await run("overview.js", { ...widgetOpts, inApp: true, note: "preview" });
+  await run("overview.js", { ...widgetOpts, inApp: true, query: { menu: "1" }, expect: {
+    "tapping the Habits header opens the menu": ({ alerts, widget }) => alerts === 1 && !widget,
+  }, note: "header tap" });
   const before = files["/docs/habit-grid.json"];
   await run("overview.js", { ...widgetOpts, inApp: true, query: { habit: "Meditate" }, expect: {
     "tapping a habit row ticks it": ({ files }) => JSON.parse(files["/docs/habit-grid.json"]).Meditate.includes(new Date().toISOString().slice(0, 10)) !== JSON.parse(before).Meditate?.includes(new Date().toISOString().slice(0, 10)),

@@ -3,12 +3,12 @@ const C = importModule("lib-calendar");
 const H = importModule("lib-habits");
 const N = importModule("lib-now");
 
-// Overview: calendar, habits and "Inbox" in one large widget, stacked under their own headers.
+// Overview: habits, calendar and "Inbox" in one large widget, stacked under their own headers.
 // Each part is drawn by the same code as its own widget (lib-calendar, lib-habits, lib-now).
-// Tapping a habit row ticks it for today, as in the habit widget.
+// As in the habit widget, tapping a habit row ticks it for today and tapping the Habits header opens the menu.
 const NOW_MIN_ROWS = 3;   // the calendar never leaves Inbox fewer rows than this
 
-function build(cal, habits, now) {
+function build(cal, habits, now, eventTitle) {
   const w = S.widget();
   const m = S.metrics();
   const large = m.large || !config.runsInWidget;    // the in-app preview is large
@@ -27,13 +27,16 @@ function build(cal, habits, now) {
   const calH = C.fitLines(cal, cap).height;
   const nowRows = Math.max(1, Math.floor((rest - calH + S.ROW_GAP) / (S.ROW + S.ROW_GAP)));
 
+  // habits first, with the same header as the habit widget: next event today (or the date); tap for the menu
+  const runURL = URLScheme.forRunningScript();
+  const head = S.header(w, innerW, "Habits", eventTitle || S.dateLabel());
+  head.url = `${runURL}?menu=1`;
+  H.drawRows(w, innerW, S.ROW, habits, runURL);
+
+  w.addSpacer(S.SECTION_GAP);
   const first = (cal.days || [])[0];
   S.header(w, innerW, first ? C.dayTitle(first.offset, first.date, "") : "Today", S.dayMonth(first ? first.date : new Date()));
   C.drawUpcoming(w, innerW, calH, cal, "");
-
-  w.addSpacer(S.SECTION_GAP);
-  S.header(w, innerW, "Habits", H.todayCount(habits));
-  H.drawRows(w, innerW, S.ROW, habits, URLScheme.forRunningScript());
 
   w.addSpacer(S.SECTION_GAP);
   S.header(w, innerW, N.TITLE, N.headRight(now));
@@ -43,17 +46,20 @@ function build(cal, habits, now) {
 }
 
 // ---- run ----
-const tapped = (args.queryParameters || {}).habit;
+const query = args.queryParameters || {};
+const tapped = query.habit;
 if (!config.runsInWidget && tapped && H.HABITS.includes(tapped)) {
   H.toggle(await H.load(), tapped);     // one-tap from a habit row
   try { App.close(); } catch (e) {}     // drop back to the Home Screen
+} else if (!config.runsInWidget && query.menu) {
+  await H.menu(await H.load());         // tapped the Habits header: the tick-off menu
 } else {
   // the first run in the app asks for calendar access and, if missing, the feed's read token
   const cal = await C.loadDays([]);
   const habits = await H.load();
   const now = await N.load(await N.token());
   const family = config.widgetFamily;
-  const widget = family && family.startsWith("accessory") ? S.lockInline("Overview: use the large size") : build(cal, habits, now);
+  const widget = family && family.startsWith("accessory") ? S.lockInline("Overview: use the large size") : build(cal, habits, now, await H.nextEvent());
   S.refresh(widget);
   if (config.runsInWidget) Script.setWidget(widget);
   else await widget.presentLarge();     // preview when run inside the app
