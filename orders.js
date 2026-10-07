@@ -9,9 +9,7 @@ const BASE = "https://misc.mrdrr.uk/widget/api/";
 const KEY = "misc-widget-read-token";   // the read token lives in the Keychain, never in this file
 const TITLE = "Now";
 const HIDE_DELIVERED_AFTER_H = 48;
-const MARK_W = 14;          // star column (left blank for ordinary items)
-const STATUS_W = 118;       // status column (medium, large)
-const SMALL_STATUS_W = 44;  // short status on the small widget
+const CHAR_W = 6.4;         // average width of one character at the row text size, to size the status column
 
 // ---- cache: the last good copy of both feeds, so the widget still draws when the server can't be reached ----
 const fm = FileManager.local();
@@ -126,7 +124,7 @@ function buildWidget(data) {
 
   if (data.error || data.rejected) {
     S.header(w, innerW, TITLE, null);
-    S.note(w, innerW, data.error || "Token rejected. Run in Scriptable to re-enter");
+    S.row(w, innerW, [{ text: data.error || "Token rejected. Run in Scriptable to re-enter" }]);
     return S.finish(w);
   }
 
@@ -134,21 +132,22 @@ function buildWidget(data) {
   const rows = S.rowsFor(availH, 1);
   const more = list.length > rows;
   const shown = more ? list.slice(0, Math.max(1, rows - 1)) : list;
-  const rightW = small ? SMALL_STATUS_W : STATUS_W;
+  const right = it => (small ? it.short : it.long);
+  // the status column is as wide as its longest text; the name gets the rest and shrinks or cuts off
+  const rightW = Math.min(Math.floor(innerW * 0.6), Math.ceil(Math.max(0, ...shown.map(it => right(it).length)) * CHAR_W) + 2);
 
   S.header(w, innerW, TITLE, headRight(data, small));
-  if (!list.length) S.note(w, innerW, "Nothing going on");
+  if (!list.length) S.row(w, innerW, [{ text: "Nothing going on" }]);
   shown.forEach((it, i) => {
     if (i > 0) w.addSpacer(S.ROW_GAP);
     S.row(w, innerW, [
-      { text: it.star ? "★" : "", w: MARK_W },
-      { text: it.name },
-      { text: small ? it.short : it.long, w: rightW, right: true, colour: it.star ? undefined : S.DIM },
-    ], S.FG);
+      { text: (it.star ? "★ " : "") + it.name, w: innerW - rightW },
+      { text: right(it), w: rightW, right: true },
+    ]);
   });
   if (more && rows > 1) {
     w.addSpacer(S.ROW_GAP);
-    S.row(w, innerW, [{ text: "", w: MARK_W }, { text: `+${list.length - shown.length} more` }], S.DIM);
+    S.row(w, innerW, [{ text: `+${list.length - shown.length} more` }]);
   }
   return S.finish(w);
 }
