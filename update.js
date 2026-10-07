@@ -4,7 +4,10 @@ const USER = "marcey92";
 const REPO = "Scriptable";
 const BRANCH = "main";
 const TOKEN = "";   // leave empty for a public repo; a private repo needs a read-only GitHub token here
-const FILES = ["update.js", "swiss.js", "habit-grid.js", "calendar-list.js", "battery.js", "weather.js", "orders.js"];
+// Used only if files.json can't be fetched. The real list lives in files.json in the repo, so adding a
+// widget never means editing this script. This script does not update itself: overwriting the file
+// that is running makes Scriptable create a duplicate. Paste a new copy by hand if this file changes.
+const FALLBACK_FILES = ["swiss.js", "habit-grid.js", "calendar-list.js", "battery.js", "weather.js", "orders.js"];
 
 let fm;
 try { fm = FileManager.iCloud(); fm.documentsDirectory(); }
@@ -12,6 +15,15 @@ catch (e) { fm = FileManager.local(); }
 
 const base = `https://raw.githubusercontent.com/${USER}/${REPO}/${BRANCH}/`;
 const report = [];
+
+let FILES = FALLBACK_FILES;
+try {
+  const req = new Request(base + "files.json");
+  if (TOKEN) req.headers = { Authorization: `Bearer ${TOKEN}` };
+  const json = await req.loadJSON();
+  const status = req.response && req.response.statusCode;
+  if (status === 200 && Array.isArray(json.files) && json.files.length) FILES = json.files.filter(f => f !== "update.js");
+} catch (e) {}
 
 for (const f of FILES) {
   try {
