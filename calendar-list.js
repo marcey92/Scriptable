@@ -84,7 +84,7 @@ function buildWidget(result, label) {
 
   const days = result.days || [];
   if (result.error || days.length === 0) {
-    S.header(w, innerW, dayTitle(0, S.dayStart(0), label), S.dateLabel());
+    S.header(w, innerW, dayTitle(0, S.dayStart(0), label), S.dayMonth());
     S.note(w, innerW, result.error || "Nothing this week", TIME_W);
   } else {
     const show = days.slice(0, maxDays);
@@ -94,7 +94,7 @@ function buildWidget(result, label) {
       if (i > 0) w.addSpacer(S.SECTION_GAP);
       const after = k - i - 1;         // sections still to come
       const rows = i === k - 1 ? left : Math.min(d.events.length, left - after);
-      S.header(w, innerW, dayTitle(d.offset, d.date, label), S.dateLabel(d.date));
+      S.header(w, innerW, dayTitle(d.offset, d.date, label), S.dayMonth(d.date));   // the title already names the day
       list(d.events, rows);
       left -= Math.min(rows, d.events.length);
     });
