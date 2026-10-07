@@ -1,4 +1,4 @@
-// lib-now.js: the "Now" list (orders.js and overview.js load it). Not a widget by itself.
+// lib-now.js: the "Inbox" list (orders.js and overview.js load it). Not a widget by itself.
 const S = importModule("swiss");
 
 // One list of what is going on: parcels and important emails, read from Marcel's misc server
@@ -8,7 +8,7 @@ const S = importModule("swiss");
 // numbers, no email summaries or bodies.
 const BASE = "https://misc.mrdrr.uk/widget/api/";
 const KEY = "misc-widget-read-token";   // the read token lives in the Keychain, never in this file
-const TITLE = "Now";
+const TITLE = "Inbox";
 const HIDE_DELIVERED_AFTER_H = 48;
 const CHAR_W = 6.4;         // average width of one character at the row text size, to size the title column
 const TITLE_MAX = 0.45;     // the title column never takes more than this share of the row after the time

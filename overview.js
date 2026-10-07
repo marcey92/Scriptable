@@ -3,10 +3,10 @@ const C = importModule("lib-calendar");
 const H = importModule("lib-habits");
 const N = importModule("lib-now");
 
-// Overview: calendar, habits and "Now" in one large widget, stacked under their own headers.
+// Overview: calendar, habits and "Inbox" in one large widget, stacked under their own headers.
 // Each part is drawn by the same code as its own widget (lib-calendar, lib-habits, lib-now).
 // Tapping a habit row ticks it for today, as in the habit widget.
-const NOW_MIN_ROWS = 3;   // the calendar never leaves Now fewer rows than this
+const NOW_MIN_ROWS = 3;   // the calendar never leaves Inbox fewer rows than this
 
 function build(cal, habits, now) {
   const w = S.widget();
@@ -20,7 +20,7 @@ function build(cal, habits, now) {
   }
 
   // height left once the three headers, the gaps between sections and the habit rows are paid for,
-  // shared by calendar and Now: the calendar takes what it needs up to half, Now gets the rest
+  // shared by calendar and Inbox: the calendar takes what it needs up to half, Inbox gets the rest
   const rowsH = k => k * S.ROW + Math.max(0, k - 1) * S.ROW_GAP;
   const rest = availH - 3 * S.HEAD_H - 2 * S.SECTION_GAP - rowsH(H.HABITS.length);
   const cap = Math.max(S.ROW, Math.min(rest - rowsH(NOW_MIN_ROWS), Math.ceil(rest / 2)));
