@@ -260,11 +260,11 @@ async function run(file, opts = {}) {
   }, note: "old star kept" });
   files["/docs/swiss-orders.json"] = savedCache;   // the offline tests below read the earlier cache
   await run("orders.js", { ...widgetOpts, family: "medium", offline: true, expect: {
-    "stale cache is shown with a stale marker": ({ text }) => text.includes("stale") && text.includes("Zalando"),
+    "offline shows the cached list; recent data is not stale": ({ text }) => !text.includes("Stale") && text.includes("Zalando"),
   }, note: "offline, cached" });
   delete files["/docs/swiss-orders.json"];
   await run("orders.js", { ...widgetOpts, family: "medium", offline: true, expect: {
-    "empty and offline still draws a message": ({ text }) => text.includes("Nothing going on"),
+    "offline with no cache says No data": ({ text }) => text.includes("No data") && !text.includes("Stale"),
   }, note: "offline, no cache" });
   await run("orders.js", { feeds, family: "medium", expect: {
     "asks to run in the app when there is no token": ({ text }) => text.includes("Run in Scriptable"),
@@ -302,8 +302,28 @@ async function run(file, opts = {}) {
     "short replaces detail on small": ({ text }) => /Amazon\s+Today/.test(text),
   }, note: "now feed" });
   await run("orders.js", { token: "tok", feeds: nowFeed, family: "medium", offline: true, expect: {
-    "offline shows the cached now feed": ({ text }) => text.includes("stale") && text.includes("Homes & Villas"),
+    "offline shows the cached now feed, judged by its own updated time": ({ text }) => !text.includes("Stale") && text.includes("Homes & Villas"),
   }, note: "now feed, offline" });
+  const aged = (h, extra = {}) => ({ now: { ...nowFeed.now, updated: h === null ? undefined : iso(h), ...extra } });
+  await run("orders.js", { token: "tok", feeds: aged(0.5), family: "medium", expect: {
+    "updated 30 minutes ago is fresh": ({ text }) => text.split("\n")[0].trim() === "Inbox",
+  }, note: "fresh" });
+  await run("orders.js", { token: "tok", feeds: aged(2), family: "medium", expect: {
+    "updated 2 hours ago is stale, with the time": ({ text }) => /^Inbox\s+Stale since \d\d:\d\d$/.test(text.split("\n")[0]) || /^Inbox\s+Stale since \d\d:\d\d·$/.test(text.split("\n")[0]),
+    "the items are still shown": ({ text }) => text.includes("Homes & Villas"),
+  }, note: "stale" });
+  await run("orders.js", { token: "tok", feeds: aged(2), family: "medium", offline: true, expect: {
+    "offline keeps the cached updated time, still stale": ({ text }) => /Stale since/.test(text) && text.includes("Homes & Villas"),
+  }, note: "stale, offline" });
+  await run("orders.js", { token: "tok", feeds: aged(30), family: "medium", expect: {
+    "updated yesterday or before shows the dot or the date": ({ text }) => /Stale since (\d\d:\d\d·|\d\d\.\d\d)$/.test(text.split("\n")[0]),
+  }, note: "stale, old" });
+  await run("orders.js", { token: "tok", feeds: aged(null), family: "medium", expect: {
+    "no updated at all counts as stale": ({ text }) => /Stale$/.test(text.split("\n")[0]),
+  }, note: "no timestamp" });
+  await run("overview.js", { token: "tok", feeds: aged(2), family: "large", expect: {
+    "the overview's Inbox header shows it too": ({ text }) => /^Inbox\s+Stale since/m.test(text),
+  }, note: "stale inbox" });
   files["/docs/swiss-orders.json"] = savedCache2;
 
   for (const family of ["large", "medium", "accessoryInline"]) await run("overview.js", { ...widgetOpts, family });

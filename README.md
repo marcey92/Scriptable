@@ -36,7 +36,7 @@ After that, run `update.js` to pull changes from GitHub. For a private repo, put
 1. Run `orders.js` inside Scriptable once. It asks for the read token and stores it. If the server rejects the token it asks again.
 2. Add a Scriptable widget and pick `orders.js`.
 
-It shows one line per item in three columns, like the weather widget: the time (with a dot after it, "21:10·", if it was yesterday, or the date for anything older), the title with a ★ if it matters, and the detail. Whatever doesn't fit is left off, except that a starred item too far down takes the bottom row. If the server can't be reached it draws the last good copy with a "stale HH:MM" marker. It stays white on navy like the rest, with no colour.
+It shows one line per item in three columns, like the weather widget: the time (with a dot after it, "21:10·", if it was yesterday, or the date for anything older), the title with a ★ if it matters, and the detail. Whatever doesn't fit is left off, except that a starred item too far down takes the bottom row. If Hermes hasn't updated the feed for 90 minutes (its `updated` time, not when the phone last fetched), the Inbox header says "Stale since 14:02" and the list stays as it was. If the server can't be reached it draws the last good copy, judged the same way; with nothing cached it says "No data". It stays white on navy like the rest, with no colour.
 
 ## Google Calendar
 
