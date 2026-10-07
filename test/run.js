@@ -97,6 +97,7 @@ async function run(file, opts = {}) {
     Script: { setWidget: w => { widget = w; }, complete: () => {}, name: () => file.replace(".js", "") },
     URLScheme: { forRunningScript: () => "scriptable:///run/x" },
     App: { close: () => {} },
+    Timer: { schedule: (ms, repeats, fn) => { const t = setTimeout(fn, ms); t.unref(); return t; } },
     Alert: class {
       addAction() {} addCancelAction() {}
       async presentSheet() { alerts++; return -1; } async present() { alerts++; return 0; }

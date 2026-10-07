@@ -15,21 +15,30 @@ function readCache() {
   try { return fm.fileExists(cachePath) ? JSON.parse(fm.readString(cachePath)) : {}; }
   catch (e) { return {}; }
 }
+let lastError = "";   // shown in the widget when something fails, to make problems visible
 function writeCache(c) { try { fm.writeString(cachePath, JSON.stringify(c)); } catch (e) {} }
 
 // ---- place ----
+// give up on a slow answer so the widget never hangs waiting for it
+function within(ms, promise) {
+  return Promise.race([promise, new Promise((_, no) => Timer.schedule(ms, false, () => no(new Error("timed out"))))]);
+}
 async function findPlace(cache) {
   if (PLACE) return PLACE;
   try {
     Location.setAccuracyToThreeKilometers();
-    const l = await Location.current();
+    const l = await within(config.runsInWidget ? 6000 : 20000, Location.current());
     let name = "";
     try {
-      const g = await Location.reverseGeocode(l.latitude, l.longitude);
+      const g = await within(4000, Location.reverseGeocode(l.latitude, l.longitude));
       name = (g && g[0] && (g[0].locality || g[0].administrativeArea)) || "";
     } catch (e) {}
+    if (!name && cache.place) name = cache.place.name || "";
     return { name, lat: l.latitude, lon: l.longitude };
-  } catch (e) { return cache.place || null; }
+  } catch (e) {
+    lastError = `Location: ${e.message || e}`;
+    return cache.place || null;
+  }
 }
 
 // ---- forecast from Open-Meteo (free, no account or key) ----
@@ -52,14 +61,14 @@ async function fetchHours(place) {
 async function loadWeather() {
   const cache = readCache();
   const place = await findPlace(cache);
-  if (!place) return { error: "Open Scriptable to allow location" };
+  if (!place) return { error: "No location yet. Run in Scriptable once", detail: lastError };
   try {
     const hours = await fetchHours(place);
     writeCache({ place, hours });
     return { place, hours };
   } catch (e) {
     if (cache.hours) return { place: cache.place || place, hours: cache.hours };
-    return { error: "No forecast available" };
+    return { error: "No forecast available", detail: `Forecast: ${e.message || e}` };
   }
 }
 
@@ -101,6 +110,7 @@ function buildWidget(data) {
   if (data.error) {
     S.header(w, innerW, TITLE, small ? null : S.dateLabel());
     S.note(w, innerW, data.error);
+    if (data.detail) { w.addSpacer(S.ROW_GAP); S.note(w, innerW, data.detail); }
     return S.finish(w);
   }
 
