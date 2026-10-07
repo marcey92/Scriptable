@@ -36,7 +36,7 @@ After that, run `update.js` to pull changes from GitHub. For a private repo, put
 1. Run `orders.js` inside Scriptable once. It asks for the read token and stores it. If the server rejects the token it asks again.
 2. Add a Scriptable widget and pick `orders.js`.
 
-It shows one line per item, like the weather widget: a ★ for important emails and problem parcels, the time (or "Yest" for yesterday, or the date for anything older), the text, and the status on the right. A parcel is its retailer (or a private order's generic title) with its status; an email is its sender with the subject on the right. It never shows tracking numbers or email summaries. Rows are newest first; whatever doesn't fit is left off, except that a starred item too old to fit takes the bottom row. If the server can't be reached it draws the last good copy with a "stale HH:MM" marker. It stays white on navy like the rest, with no colour.
+It shows one line per item in three columns, like the weather widget: the time (with a dot after it, "21:10·", if it was yesterday, or the date for anything older), the title with a ★ if it matters, and the detail. Whatever doesn't fit is left off, except that a starred item too far down takes the bottom row. If the server can't be reached it draws the last good copy with a "stale HH:MM" marker. It stays white on navy like the rest, with no colour.
 
 ## Google Calendar
 

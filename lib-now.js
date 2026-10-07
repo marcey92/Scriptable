@@ -96,12 +96,12 @@ function etaText(eta) {
 }
 const isDelivered = o => o.delivered || o.status === "delivered";
 
-// "14:02" if it happened today, "Yest" if yesterday, otherwise the date as "06.10"
+// "14:02" if it happened today, "14:02·" if yesterday, otherwise the date as "06.10"
 function whenText(ms) {
   if (!ms) return "";
   const d = new Date(ms);
   if (d.toDateString() === new Date().toDateString()) return S.timeLabel(d);
-  if (d.toDateString() === S.dayStart(-1).toDateString()) return "Yest";
+  if (d.toDateString() === S.dayStart(-1).toDateString()) return S.timeLabel(d) + "·";   // yesterday: the time, then a dot
   return `${S.p(d.getDate())}.${S.p(d.getMonth() + 1)}`;
 }
 

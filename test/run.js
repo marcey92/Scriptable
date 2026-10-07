@@ -234,13 +234,13 @@ async function run(file, opts = {}) {
     "private order shows its generic title, not the retailer": ({ text }) => !/^X$/m.test(text) && text.includes("Parcel"),
     "emails show the sender, then the subject on the right": ({ text }) => /★ Landlord\s+Boiler repair today/.test(text),
     "today shows a time": ({ text }) => /\d\d:\d\d\s+Zalando/.test(text),
-    "five rows on medium, no +N more line": ({ text }) => !/more/.test(text) && text.split("\n").filter(l => /^\s*(\d\d:\d\d|Yest|\d\d\.\d\d)/.test(l)).length === 5,
+    "five rows on medium, no +N more line": ({ text }) => !/more/.test(text) && text.split("\n").filter(l => /^\s*(\d\d:\d\d|\d\d\.\d\d)/.test(l)).length === 5,
   }, note: "one list" });
   await run("orders.js", { ...widgetOpts, family: "large", expect: {
     "ordered sorts after out for delivery": ({ text }) => text.indexOf("Zalando") < text.indexOf("Amazon"),
     "recent delivered is shown": ({ text }) => text.includes("Apple"),
     "delivered older than 48h is hidden": ({ text }) => !text.includes("IKEA"),
-    "yesterday shows Yest": ({ text }) => /Yest\s+★ Bank/.test(text),
+    "yesterday shows the time with a dot after it": ({ text }) => /\d\d:\d\d·\s+★ Bank/.test(text),
     "older than yesterday shows the date": ({ text }) => { const d = new Date(Date.now() - 48 * 3600 * 1000); return new RegExp(`${String(d.getDate()).padStart(2, "0")}\\.${String(d.getMonth() + 1).padStart(2, "0")}\\s+Amazon`).test(text); },
     "every important email is starred": ({ text }) => /★ Landlord/.test(text) && /★ Bank/.test(text),
     "nothing is cut off on the large widget": ({ text }) => !/more/.test(text),
@@ -306,7 +306,8 @@ async function run(file, opts = {}) {
     "habit rows are drawn": ({ text }) => /^Anki/m.test(text) && /^Gratitude/m.test(text),
     "calendar rows are drawn": ({ text }) => text.includes("Late dinner"),
     "now rows are drawn": ({ text }) => text.includes("★ Parcel"),
-    "calendar takes at most half the shared rows": ({ text }) => !text.includes("Brunch"),
+    "calendar takes at most half the shared space": ({ text }) => !text.includes("Brunch"),
+    "a later day gets a real heading with a rule under it": ({ text }) => { const l = text.split("\n"); const i = l.findIndex(x => /^Tomorrow/.test(x)); return i > 0 && /^─/.test(l[i + 1]); },
   }, note: "contents" });
   await run("overview.js", { ...widgetOpts, family: "large", events: [], expect: {
     "an empty week still leaves Now its rows": ({ text }) => text.includes("Nothing this week") && text.includes("Zalando") && text.includes("Amazon"),

@@ -19,16 +19,17 @@ function build(cal, habits, now) {
     return S.finish(w);
   }
 
-  // rows left once the three headers and the habit rows are paid for, shared by calendar and Now:
-  // the calendar takes what it needs up to half, Now gets the rest
-  const rest = Math.max(2, S.rowsFor(availH, 3) - H.HABITS.length);
-  const cap = Math.max(1, Math.min(rest - NOW_MIN_ROWS, Math.ceil(rest / 2)));
-  const calRows = Math.max(1, C.fitLines(cal, cap).length);
-  const nowRows = Math.max(1, rest - calRows);
+  // height left once the three headers, the gaps between sections and the habit rows are paid for,
+  // shared by calendar and Now: the calendar takes what it needs up to half, Now gets the rest
+  const rowsH = k => k * S.ROW + Math.max(0, k - 1) * S.ROW_GAP;
+  const rest = availH - 3 * S.HEAD_H - 2 * S.SECTION_GAP - rowsH(H.HABITS.length);
+  const cap = Math.max(S.ROW, Math.min(rest - rowsH(NOW_MIN_ROWS), Math.ceil(rest / 2)));
+  const calH = C.fitLines(cal, cap).height;
+  const nowRows = Math.max(1, Math.floor((rest - calH + S.ROW_GAP) / (S.ROW + S.ROW_GAP)));
 
   const first = (cal.days || [])[0];
   S.header(w, innerW, first ? C.dayTitle(first.offset, first.date, "") : "Today", S.dayMonth(first ? first.date : new Date()));
-  C.drawUpcoming(w, innerW, calRows, cal, "");
+  C.drawUpcoming(w, innerW, calH, cal, "");
 
   w.addSpacer(S.SECTION_GAP);
   S.header(w, innerW, "Habits", H.todayCount(habits));
