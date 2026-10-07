@@ -225,23 +225,27 @@ async function run(file, opts = {}) {
   const widgetOpts = { token: "tok", feeds };
   const clean = ({ text }) => !/SECRET/.test(text);
   for (const family of [...home, ...lock]) await run("orders.js", { ...widgetOpts, family, expect: { "no tracking numbers or email bodies": clean } });
-  await run("orders.js", { ...widgetOpts, family: "small", expect: {
-    "problem sorts before out for delivery": ({ text }) => text.indexOf("Parcel") < text.indexOf("Zalando"),
-    "private order shows its generic title, not the retailer": ({ text }) => !/^X$/m.test(text) && text.includes("Parcel"),
+  await run("orders.js", { ...widgetOpts, family: "medium", expect: {
+    "one list: titled Now, no Orders or Important sections": ({ text }) => text.includes("Now") && !text.includes("Important") && !text.includes("Orders"),
+    "urgent email and problem parcel come first, with stars": ({ text }) => /★.*Boiler/.test(text) && /★.*Parcel/.test(text) && text.indexOf("Boiler") < text.indexOf("Zalando") && text.indexOf("Parcel") < text.indexOf("Zalando"),
+    "out for delivery before ordered": ({ text }) => text.indexOf("Zalando") < (text.indexOf("Amazon") === -1 ? 1e9 : text.indexOf("Amazon")),
     "range eta shows the later day": ({ text }) => text.includes("Out for delivery · 09.10"),
-  }, note: "sorting" });
+    "private order shows its generic title, not the retailer": ({ text }) => !/^X$/m.test(text) && text.includes("Parcel"),
+    "emails show sender and subject": ({ text }) => text.includes("Landlord · Boiler repair today"),
+    "overflow becomes a +N more line": ({ text }) => /\+\d+ more/.test(text),
+  }, note: "one list" });
   await run("orders.js", { ...widgetOpts, family: "large", expect: {
     "ordered sorts after out for delivery": ({ text }) => text.indexOf("Zalando") < text.indexOf("Amazon"),
-    "recent delivered is shown": ({ text }) => text.includes("Apple"),
+    "recent delivered is shown, last": ({ text }) => text.includes("Apple") && text.indexOf("Apple") > text.indexOf("Amazon"),
     "delivered older than 48h is hidden": ({ text }) => !text.includes("IKEA"),
-    "urgent item comes first": ({ text }) => text.indexOf("Boiler") < text.indexOf("statement"),
+    "nothing is cut off on the large widget": ({ text }) => !/more/.test(text),
   }, note: "hide old delivered" });
   await run("orders.js", { ...widgetOpts, family: "medium", offline: true, expect: {
     "stale cache is shown with a stale marker": ({ text }) => text.includes("stale") && text.includes("Zalando"),
   }, note: "offline, cached" });
   delete files["/docs/swiss-orders.json"];
   await run("orders.js", { ...widgetOpts, family: "medium", offline: true, expect: {
-    "empty and offline still draws a message": ({ text }) => text.includes("No active orders"),
+    "empty and offline still draws a message": ({ text }) => text.includes("Nothing going on"),
   }, note: "offline, no cache" });
   await run("orders.js", { feeds, family: "medium", expect: {
     "asks to run in the app when there is no token": ({ text }) => text.includes("Run in Scriptable"),
