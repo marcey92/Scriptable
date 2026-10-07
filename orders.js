@@ -1,7 +1,7 @@
 const S = importModule("swiss");
 
 // One list of what is going on: parcels and important emails, read from Marcel's misc server
-// (pushed there by Hermes). A red star marks urgent emails and problem parcels.
+// (pushed there by Hermes). A star marks urgent emails and problem parcels.
 // Home Screen widgets can be read by bystanders, so a parcel shows only its retailer (or the generic
 // title of a private order) and status, and an email only its sender and subject. No tracking
 // numbers, no email summaries or bodies.
@@ -9,7 +9,7 @@ const BASE = "https://misc.mrdrr.uk/widget/api/";
 const KEY = "misc-widget-read-token";   // the read token lives in the Keychain, never in this file
 const TITLE = "Now";
 const HIDE_DELIVERED_AFTER_H = 48;
-const MARK_W = 14;          // star / box column
+const MARK_W = 14;          // star column (left blank for ordinary items)
 const STATUS_W = 118;       // status column (medium, large)
 const SMALL_STATUS_W = 44;  // short status on the small widget
 
@@ -141,10 +141,10 @@ function buildWidget(data) {
   shown.forEach((it, i) => {
     if (i > 0) w.addSpacer(S.ROW_GAP);
     S.row(w, innerW, [
-      { text: it.star ? "★" : "□", w: MARK_W },
+      { text: it.star ? "★" : "", w: MARK_W },
       { text: it.name },
       { text: small ? it.short : it.long, w: rightW, right: true, colour: it.star ? undefined : S.DIM },
-    ], it.star ? S.ALERT : S.FG);
+    ], S.FG);
   });
   if (more && rows > 1) {
     w.addSpacer(S.ROW_GAP);
