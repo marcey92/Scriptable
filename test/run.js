@@ -211,8 +211,8 @@ async function run(file, opts = {}) {
   const iso = h => new Date(Date.now() - h * 3600 * 1000).toISOString();
   const feeds = {
     orders: { schema_version: 1, updated: iso(0), orders: [
-      { id: "1", retailer: "Amazon", title: "Kettle", private: false, status: "ordered", status_label: "Ordered", eta: "2026-10-12", tracking_number: "TRK-SECRET-1", last_event: iso(5), delivered: false },
-      { id: "2", retailer: "Zalando", title: "Shoes", private: false, status: "out_for_delivery", status_label: "Out for delivery", eta: "2026-10-08/2026-10-09", tracking_number: "TRK-SECRET-2", last_event: iso(2), delivered: false },
+      { id: "1", retailer: "Amazon", title: "Kettle", private: false, status: "ordered", status_label: "Ordered", eta: "2026-10-12", tracking_number: "TRK-SECRET-1", last_event: iso(30), delivered: false },
+      { id: "2", retailer: "Zalando", title: "Shoes", private: false, status: "out_for_delivery", status_label: "Out for delivery", eta: "2026-10-08/2026-10-09", tracking_number: "TRK-SECRET-2", last_event: iso(0), delivered: false },
       { id: "3", retailer: "X", title: "Parcel", private: true, status: "problem", status_label: "Delivery problem", eta: null, tracking_number: null, last_event: iso(3), delivered: false },
       { id: "4", retailer: "IKEA", title: "Shelf", private: false, status: "delivered", status_label: "Delivered", eta: null, tracking_number: null, last_event: iso(60), delivered: true },
       { id: "5", retailer: "Apple", title: "Cable", private: false, status: "delivered", status_label: "Delivered", eta: null, tracking_number: null, last_event: iso(10), delivered: true },
@@ -231,13 +231,15 @@ async function run(file, opts = {}) {
     "out for delivery before ordered": ({ text }) => text.indexOf("Zalando") < (text.indexOf("Amazon") === -1 ? 1e9 : text.indexOf("Amazon")),
     "range eta shows the later day": ({ text }) => text.includes("Out for delivery · 09.10"),
     "private order shows its generic title, not the retailer": ({ text }) => !/^X$/m.test(text) && text.includes("Parcel"),
-    "emails show sender and subject": ({ text }) => text.includes("Landlord · Boiler repair today"),
+    "emails show the subject, with the sender on the right": ({ text }) => /Boiler repair today\s+Landlord/.test(text),
+    "today shows a time": ({ text }) => /\d\d:\d\d\s+Zalando/.test(text),
     "overflow becomes a +N more line": ({ text }) => /\+\d+ more/.test(text),
   }, note: "one list" });
   await run("orders.js", { ...widgetOpts, family: "large", expect: {
     "ordered sorts after out for delivery": ({ text }) => text.indexOf("Zalando") < text.indexOf("Amazon"),
     "recent delivered is shown, last": ({ text }) => text.includes("Apple") && text.indexOf("Apple") > text.indexOf("Amazon"),
     "delivered older than 48h is hidden": ({ text }) => !text.includes("IKEA"),
+    "older than today shows the date": ({ text }) => { const d = new Date(Date.now() - 30 * 3600 * 1000); return new RegExp(`${String(d.getDate()).padStart(2, "0")}\\.${String(d.getMonth() + 1).padStart(2, "0")}\\s+Amazon`).test(text); },
     "nothing is cut off on the large widget": ({ text }) => !/more/.test(text),
   }, note: "hide old delivered" });
   await run("orders.js", { ...widgetOpts, family: "medium", offline: true, expect: {
