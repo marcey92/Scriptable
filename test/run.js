@@ -228,23 +228,31 @@ async function run(file, opts = {}) {
   await run("orders.js", { ...widgetOpts, family: "medium", expect: {
     "no date in the header": ({ text }) => !/\d\d\.\d\d \w{3}/.test(text.split("\n")[0]),
     "one list: titled Now, no Orders or Important sections": ({ text }) => text.includes("Now") && !text.includes("Important") && !text.includes("Orders"),
-    "urgent email and problem parcel come first, with stars": ({ text }) => /★.*Boiler/.test(text) && /★.*Parcel/.test(text) && text.indexOf("Boiler") < text.indexOf("Zalando") && text.indexOf("Parcel") < text.indexOf("Zalando"),
-    "out for delivery before ordered": ({ text }) => text.indexOf("Zalando") < (text.indexOf("Amazon") === -1 ? 1e9 : text.indexOf("Amazon")),
+    "sorted newest first, stars do not jump ahead": ({ text }) => text.indexOf("Zalando") < text.indexOf("Parcel") && text.indexOf("Parcel") < text.indexOf("Landlord") && text.indexOf("Landlord") < text.indexOf("Bank"),
+    "starred items are marked": ({ text }) => /★ Parcel/.test(text) && /★ Landlord/.test(text),
     "range eta shows the later day": ({ text }) => text.includes("Out for delivery · 09.10"),
     "private order shows its generic title, not the retailer": ({ text }) => !/^X$/m.test(text) && text.includes("Parcel"),
     "emails show the sender, then the subject on the right": ({ text }) => /★ Landlord\s+Boiler repair today/.test(text),
     "today shows a time": ({ text }) => /\d\d:\d\d\s+Zalando/.test(text),
-    "every row shows an item, no +N more line": ({ text }) => !/more/.test(text) && text.split("\n").filter(l => /^\s*(\d\d:\d\d|Yest|\d\d\.\d\d)/.test(l)).length === 4,
+    "five rows on medium, no +N more line": ({ text }) => !/more/.test(text) && text.split("\n").filter(l => /^\s*(\d\d:\d\d|Yest|\d\d\.\d\d)/.test(l)).length === 5,
   }, note: "one list" });
   await run("orders.js", { ...widgetOpts, family: "large", expect: {
     "ordered sorts after out for delivery": ({ text }) => text.indexOf("Zalando") < text.indexOf("Amazon"),
-    "recent delivered is shown, last": ({ text }) => text.includes("Apple") && text.indexOf("Apple") > text.indexOf("Amazon"),
+    "recent delivered is shown": ({ text }) => text.includes("Apple"),
     "delivered older than 48h is hidden": ({ text }) => !text.includes("IKEA"),
     "yesterday shows Yest": ({ text }) => /Yest\s+★ Bank/.test(text),
     "older than yesterday shows the date": ({ text }) => { const d = new Date(Date.now() - 48 * 3600 * 1000); return new RegExp(`${String(d.getDate()).padStart(2, "0")}\\.${String(d.getMonth() + 1).padStart(2, "0")}\\s+Amazon`).test(text); },
     "every important email is starred": ({ text }) => /★ Landlord/.test(text) && /★ Bank/.test(text),
     "nothing is cut off on the large widget": ({ text }) => !/more/.test(text),
   }, note: "hide old delivered" });
+  const busy = { orders: { orders: [1, 2, 3, 4, 5, 6].map(n => ({ id: `n${n}`, retailer: `Shop${n}`, private: false, status: "dispatched", status_label: "Dispatched", last_event: iso(n), delivered: false })) },
+    important: { important: [{ id: "old", from: "Council", subject: "Old but important", received: iso(72), urgent: false }] } };
+  const savedCache = files["/docs/swiss-orders.json"];
+  await run("orders.js", { token: "tok", feeds: busy, family: "medium", expect: {
+    "an old starred item too old to fit takes the bottom row": ({ text }) => /★ Council/.test(text.split("\n").pop()),
+    "the rest are the newest, in order": ({ text }) => /Shop1[\s\S]*Shop2[\s\S]*Shop3[\s\S]*Shop4/.test(text) && !text.includes("Shop5"),
+  }, note: "old star kept" });
+  files["/docs/swiss-orders.json"] = savedCache;   // the offline tests below read the earlier cache
   await run("orders.js", { ...widgetOpts, family: "medium", offline: true, expect: {
     "stale cache is shown with a stale marker": ({ text }) => text.includes("stale") && text.includes("Zalando"),
   }, note: "offline, cached" });
