@@ -130,16 +130,24 @@ function buildWidget(data) {
 }
 
 // ---- Lock Screen ----
-function lockLine(r) {
-  return [r.label, deg(r.temp), words(r.code), pct(r.rain)].filter(Boolean).join(" ");
-}
+// rectangular: styled like the habit grid, a small title and rule, then three rows of columns
+const LOCK_TIME_W = 34, LOCK_TEMP_W = 26, LOCK_RAIN_W = 28;
 function buildLockRect(data) {
   const w = S.lockWidget();
-  const lines = data.error ? [data.error] : pick(data.hours, 3).map(lockLine);
-  lines.forEach((text, i) => {
-    if (i > 0) w.addSpacer(3);
-    S.lockText(w, text);
-  });
+  S.lockHeader(w, S.LOCK_W, TITLE);
+  if (data.error) {
+    S.lockRow(w, S.LOCK_W, [{ text: data.error }]);
+  } else {
+    pick(data.hours, 3).forEach((r, i) => {
+      if (i > 0) w.addSpacer(2);
+      S.lockRow(w, S.LOCK_W, [
+        { text: r.label, w: LOCK_TIME_W, mono: true },
+        { text: deg(r.temp), w: LOCK_TEMP_W, mono: true },
+        { text: words(r.code) },
+        { text: pct(r.rain), w: LOCK_RAIN_W, mono: true, right: true },
+      ]);
+    });
+  }
   w.addSpacer();
   return w;
 }
