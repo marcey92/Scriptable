@@ -85,7 +85,6 @@ S.row = (w, innerW, cells, colour = S.FG) => {
   for (const c of cells) {
     const put = parent => {
       const t = parent.addText(String(c.text)); t.lineLimit = 1;
-      t.minimumScaleFactor = 0.8;   // shrink a little before cutting text off with "…"
       t.font = c.mono ? Font.regularMonospacedSystemFont(S.TEXT_SIZE) : Font.mediumSystemFont(S.TEXT_SIZE);
       t.textColor = c.colour || colour;
     };
