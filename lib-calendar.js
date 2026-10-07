@@ -93,24 +93,39 @@ function upcomingLines(result) {
   return out;
 }
 
-// at most `rows` lines, never ending on a day label with no event under it
-function fitLines(result, rows) {
-  const lines = upcomingLines(result).slice(0, rows);
-  return lines.length && lines[lines.length - 1].day ? lines.slice(0, -1) : lines;
+// height of each kind of line: an event row, and a later day's heading (a section gap, then a header)
+const EVENT_H = S.ROW, DAY_H = S.SECTION_GAP + S.HEAD_H;
+
+// the lines that fit in `maxH` points, never ending on a day heading with no event under it.
+// Returns { lines, height }.
+function fitLines(result, maxH) {
+  const lines = [];
+  let h = 0;
+  for (const l of upcomingLines(result)) {
+    const prev = lines[lines.length - 1];
+    const cost = l.day ? DAY_H : EVENT_H + (prev && !prev.day ? S.ROW_GAP : 0);
+    if (h + cost > maxH) break;
+    lines.push(l); h += cost;
+  }
+  while (lines.length && lines[lines.length - 1].day) { lines.pop(); h -= DAY_H; }
+  return { lines, height: Math.max(h, EVENT_H) };
 }
 
-// `rows` lines of upcoming events under a header that already names the first day (used by the overview widget)
-function drawUpcoming(w, innerW, rows, result, label) {
+// upcoming events in `maxH` points under a header that already names the first day; each later day
+// gets its own heading (used by the overview widget)
+function drawUpcoming(w, innerW, maxH, result, label) {
   if (result.error || !(result.days || []).length) {
     S.row(w, innerW, [{ text: result.error || "Nothing this week" }]);
     return;
   }
-  let lines = upcomingLines(result).slice(0, rows);
-  if (lines.length && lines[lines.length - 1].day) lines = lines.slice(0, -1);   // no day label without an event under it
-  lines.forEach((l, i) => {
-    if (i > 0) w.addSpacer(S.ROW_GAP);
-    if (l.day) S.row(w, innerW, [{ text: dayTitle(l.day.offset, l.day.date, label) }, { text: S.dayMonth(l.day.date), w: 40, right: true }]);
-    else S.row(w, innerW, [{ text: l.event.isAllDay ? "—" : S.timeLabel(l.event.startDate), w: S.TIME_W, mono: true }, { text: l.event.title }]);
+  fitLines(result, maxH).lines.forEach((l, i, all) => {
+    if (l.day) {
+      w.addSpacer(S.SECTION_GAP);
+      S.header(w, innerW, dayTitle(l.day.offset, l.day.date, label), S.dayMonth(l.day.date));
+      return;
+    }
+    if (i > 0 && !all[i - 1].day) w.addSpacer(S.ROW_GAP);
+    S.row(w, innerW, [{ text: l.event.isAllDay ? "—" : S.timeLabel(l.event.startDate), w: S.TIME_W, mono: true }, { text: l.event.title }]);
   });
 }
 
