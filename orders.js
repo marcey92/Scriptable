@@ -10,7 +10,6 @@ const KEY = "misc-widget-read-token";   // the read token lives in the Keychain,
 const TITLE = "Now";
 const HIDE_DELIVERED_AFTER_H = 48;
 const CHAR_W = 6.4;         // average width of one character at the row text size, to size the status column
-const STAR_W = 12;          // star column
 const WHEN_W = 44;          // time column, as wide as the one in the weather and calendar widgets
 
 // ---- cache: the last good copy of both feeds, so the widget still draws when the server can't be reached ----
@@ -72,7 +71,8 @@ async function load(token) {
 }
 
 // ---- what to show: one list of everything going on ----
-// rank: lower comes first. Things that need you, then parcels by how close they are, then emails.
+// rank: lower comes first. Urgent emails and problem parcels, then important emails and parcels out for
+// delivery (newest first), then the other parcels by how close they are.
 const PARCEL_RANK = { out_for_delivery: 1, with_courier: 3, dispatched: 4, ordered: 5, delivered: 7 };
 const SHORT = { out_for_delivery: "Today", with_courier: "Courier", dispatched: "Sent", ordered: "Ordered", problem: "Problem", delivered: "Done" };
 
@@ -115,19 +115,18 @@ function items(data) {
   }
   for (const i of data.important) {
     out.push({
-      star: !!i.urgent, name: i.subject || i.from || "", long: i.from || "Email", short: "",
+      star: true, name: i.subject || i.from || "", long: i.from || "Email", short: "",
       lock: [i.from, i.subject].filter(Boolean).join(" · "),
-      rank: i.urgent ? 0 : i.action_needed ? 2 : 6,
+      rank: i.urgent ? 0 : 1,
       when: new Date(i.received).getTime() || 0, done: false,
     });
   }
   return out.sort((a, b) => a.rank - b.rank || b.when - a.when);
 }
 
-// right-hand header text: the date, or when the data is old, the time it was last fetched
-function headRight(data, small) {
-  if (data.stale && data.fetchedAt) return `stale ${S.timeLabel(new Date(data.fetchedAt))}`;
-  return small ? null : S.dateLabel();
+// right-hand header text: nothing, unless the data is old, then the time it was last fetched
+function headRight(data) {
+  return data.stale && data.fetchedAt ? `stale ${S.timeLabel(new Date(data.fetchedAt))}` : null;
 }
 
 // ---- Home Screen widget ----
@@ -149,20 +148,20 @@ function buildWidget(data) {
   // the status column is as wide as its longest text; the name gets the rest and shrinks or cuts off
   const rightW = Math.min(Math.floor(innerW * 0.5), Math.ceil(Math.max(0, ...shown.map(it => right(it).length)) * CHAR_W) + 2);
 
-  S.header(w, innerW, TITLE, headRight(data, small));
+  S.header(w, innerW, TITLE, headRight(data));
   if (!list.length) S.row(w, innerW, [{ text: "Nothing going on" }]);
-  // medium and large: star, time or date, text, status. small: no time, a short status.
-  const lead = small ? STAR_W : STAR_W + WHEN_W;
+  // medium and large: time or date, text (starred ones begin with ★), status. small: no time, a short status.
+  const lead = small ? 0 : WHEN_W;
   shown.forEach((it, i) => {
     if (i > 0) w.addSpacer(S.ROW_GAP);
-    const cells = [{ text: it.star ? "★" : "", w: STAR_W }];
+    const cells = [];
     if (!small) cells.push({ text: whenText(it.when), w: WHEN_W, mono: true });
-    cells.push({ text: it.name, w: innerW - lead - rightW }, { text: right(it), w: rightW, right: true });
+    cells.push({ text: (it.star ? "★ " : "") + it.name, w: innerW - lead - rightW }, { text: right(it), w: rightW, right: true });
     S.row(w, innerW, cells);
   });
   if (more && rows > 1) {
     w.addSpacer(S.ROW_GAP);
-    S.row(w, innerW, [{ text: "", w: STAR_W }, { text: `+${list.length - shown.length} more` }]);
+    S.row(w, innerW, [{ text: `+${list.length - shown.length} more` }]);
   }
   return S.finish(w);
 }
