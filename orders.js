@@ -84,11 +84,13 @@ function etaText(eta) {
 }
 const isDelivered = o => o.delivered || o.status === "delivered";
 
-// "14:02" if it happened today, otherwise the date as "06.10"
+// "14:02" if it happened today, "Yest" if yesterday, otherwise the date as "06.10"
 function whenText(ms) {
   if (!ms) return "";
   const d = new Date(ms);
-  return d.toDateString() === new Date().toDateString() ? S.timeLabel(d) : `${S.p(d.getDate())}.${S.p(d.getMonth() + 1)}`;
+  if (d.toDateString() === new Date().toDateString()) return S.timeLabel(d);
+  if (d.toDateString() === S.dayStart(-1).toDateString()) return "Yest";
+  return `${S.p(d.getDate())}.${S.p(d.getMonth() + 1)}`;
 }
 
 // parcels and emails as the same kind of item: { star, name, long, short, lock, rank, when }
