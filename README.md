@@ -8,10 +8,10 @@ Scriptable widgets for iOS in one fixed style: a title, a hairline rule, then ro
 | `calendar-list.js` | The next days that have events | Small, medium, large, Lock Screen |
 | `battery.js` | Charge as a figure and a bar of boxes | Small, medium, Lock Screen |
 | `weather.js` | Hours, temperature, conditions, rain chance | Small, medium, large, Lock Screen |
-| `orders.js` | "Now": one list of parcels and important emails, urgent ones get a ★ (from the misc server) | Small, medium, large, Lock Screen |
-| `overview.js` | Calendar, habits and Now stacked in one widget; tap a habit row to tick today | Large |
+| `orders.js` | "Inbox": one list of parcels and important emails, urgent ones get a ★ (from the misc server) | Small, medium, large, Lock Screen |
+| `overview.js` | Calendar, habits and Inbox stacked in one widget; tap a habit row to tick today | Large |
 | `swiss.js` | The shared style. Not a widget; the others load it | |
-| `lib-calendar.js`, `lib-habits.js`, `lib-now.js` | The calendar, habit and Now logic, shared by their own widget and `overview.js`. Not widgets | |
+| `lib-calendar.js`, `lib-habits.js`, `lib-now.js` | The calendar, habit and Inbox logic, shared by their own widget and `overview.js`. Not widgets | |
 | `update.js` | Pulls the latest scripts from this repo | Run in the app |
 
 ## The style lives in one file

@@ -1,7 +1,7 @@
 const S = importModule("swiss");
 const N = importModule("lib-now");
 
-// "Now": parcels and important emails in one list, newest first. The logic lives in lib-now.js.
+// "Inbox": parcels and important emails in one list, newest first. The logic lives in lib-now.js.
 
 // ---- run ----
 let data = await N.load(await N.token());

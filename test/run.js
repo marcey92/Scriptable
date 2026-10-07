@@ -227,7 +227,7 @@ async function run(file, opts = {}) {
   for (const family of [...home, ...lock]) await run("orders.js", { ...widgetOpts, family, expect: { "no tracking numbers or email bodies": clean } });
   await run("orders.js", { ...widgetOpts, family: "medium", expect: {
     "no date in the header": ({ text }) => !/\d\d\.\d\d \w{3}/.test(text.split("\n")[0]),
-    "one list: titled Now, no Orders or Important sections": ({ text }) => text.includes("Now") && !text.includes("Important") && !text.includes("Orders"),
+    "one list: titled Inbox, no Orders or Important sections": ({ text }) => text.includes("Inbox") && !text.includes("Important") && !text.includes("Orders"),
     "sorted newest first, stars do not jump ahead": ({ text }) => text.indexOf("Zalando") < text.indexOf("Parcel") && text.indexOf("Parcel") < text.indexOf("Landlord") && text.indexOf("Landlord") < text.indexOf("Bank"),
     "starred items are marked": ({ text }) => /★ Parcel/.test(text) && /★ Landlord/.test(text),
     "range eta shows the later day": ({ text }) => text.includes("Out for delivery · 09.10"),
@@ -302,7 +302,7 @@ async function run(file, opts = {}) {
 
   for (const family of ["large", "medium", "accessoryInline"]) await run("overview.js", { ...widgetOpts, family });
   await run("overview.js", { ...widgetOpts, family: "large", expect: {
-    "three sections: day, habits, now": ({ text }) => /^Today/m.test(text) && /^Habits/m.test(text) && /^Now/m.test(text),
+    "three sections: day, habits, inbox": ({ text }) => /^Today/m.test(text) && /^Habits/m.test(text) && /^Inbox/m.test(text),
     "habit rows are drawn": ({ text }) => /^Anki/m.test(text) && /^Gratitude/m.test(text),
     "calendar rows are drawn": ({ text }) => text.includes("Late dinner"),
     "now rows are drawn": ({ text }) => text.includes("★ Parcel"),
