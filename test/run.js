@@ -113,7 +113,7 @@ async function run(file, opts = {}) {
     FileManager: (() => {
       const fm = {
         documentsDirectory: () => "/docs", joinPath: (a, b) => `${a}/${b}`,
-        fileExists: p => p in files, readString: p => files[p], writeString: (p, s) => { files[p] = s; },
+        fileExists: p => p in files, readString: p => files[p], writeString: (p, s) => { files[p] = s; }, remove: p => { delete files[p]; },
         downloadFileFromiCloud: async () => {},
       };
       return { iCloud: () => fm, local: () => fm };
@@ -125,6 +125,7 @@ async function run(file, opts = {}) {
     },
     CalendarEvent: class {
       save() {
+        if (opts.saveFails) throw new Error("not allowed");
         if (!this.identifier) { this.identifier = `ev${nextId++}`; savedEvents.push(this); }
         this.cal = this.calendar && this.calendar.title;
       }
@@ -357,6 +358,35 @@ async function run(file, opts = {}) {
   await run("calendar-list.js", { token: "tok", feeds: {}, family: "large", expect: {
     "no feed: nothing added, nothing removed": () => savedEvents.length === 2,
   }, note: "no calendar feed" });
+  // the Hermes widget: what Hermes did on its own, and calendar failures on this phone
+  const activity = h => ({ activity: { schema_version: 1, updated: iso(h), items: [
+    { when: iso(0.1), title: "Calendar", detail: "Added Flight to Cancún" },
+    { when: iso(0.2), title: "Telegram", detail: "Sent: Boiler repair today" },
+    { when: iso(1), title: "Email", detail: "Marked 4 newsletters read" },
+  ] } });
+  await run("hermes.js", { token: "tok", feeds: activity(0.05), family: "medium", expect: {
+    "header shows when Hermes last ran": ({ text }) => /^Hermes\s+\d\d:\d\d$/.test(text.split("\n")[0]),
+    "one line per action: time, kind, what": ({ text }) => /\d\d:\d\d\s+Calendar\s+Added Flight to Cancún/.test(text) && text.includes("Marked 4 newsletters read"),
+    "no failure line when the sync is fine": ({ text }) => !text.includes("★"),
+  }, note: "activity" });
+  await run("hermes.js", { token: "tok", feeds: activity(3), family: "medium", expect: {
+    "an old run shows the stale marker": ({ text }) => /^Hermes\s+Stale since/.test(text.split("\n")[0]),
+  }, note: "stale" });
+  await run("hermes.js", { token: "tok", feeds: {}, family: "medium", expect: {
+    "feed unavailable: the last cached list is shown": ({ text }) => text.includes("Added Flight to Cancún"),
+  }, note: "feed unavailable" });
+  await run("calendar-list.js", { token: "tok", feeds: calFeed([{ ...checkin, id: "new-one", title: "Dentist" }]), saveFails: true, family: "medium", note: "event can't be saved" });
+  await run("hermes.js", { token: "tok", feeds: activity(0.05), family: "medium", expect: {
+    "a failed calendar add shows as a starred line at the top": ({ text }) => /★ Calendar\s+Couldn't add Dentist/.test(text.split("\n")[2]),
+  }, note: "calendar failure" });
+  await run("calendar-list.js", { token: "tok", feeds: calFeed([{ ...checkin, id: "new-one", title: "Dentist" }]), family: "medium", note: "event saved on retry" });
+  await run("hermes.js", { token: "tok", feeds: activity(0.05), family: "medium", expect: {
+    "a later successful sync clears it": ({ text }) => !text.includes("Couldn't add"),
+  }, note: "failure cleared" });
+  await run("calendar-list.js", { token: "tok", feeds: calFeed([checkin]), offline: true, family: "medium", note: "offline sync" });
+  await run("hermes.js", { token: "tok", feeds: activity(0.05), family: "medium", expect: {
+    "being offline is not a failure": ({ text }) => !text.includes("★"),
+  }, note: "offline is fine" });
   savedEvents.length = 0;   // the tests below expect only the stand-in calendar
 
   for (const family of ["large", "medium", "accessoryInline"]) await run("overview.js", { ...widgetOpts, family });

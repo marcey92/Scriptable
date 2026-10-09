@@ -198,7 +198,7 @@ function buildWidget(data) {
 
 // `rows` lines of items under a header that is already drawn (also used by the overview widget).
 // medium and large: time or date, text (starred ones begin with ★), status. small: no time, a short status.
-function drawRows(w, innerW, rows, data, small = false) {
+function drawRows(w, innerW, rows, data, small = false, empty = "Nothing going on") {
   if (data.error || data.rejected) {
     S.row(w, innerW, [{ text: data.error || "Token rejected. Run in Scriptable to re-enter" }]);
     return;
@@ -211,7 +211,7 @@ function drawRows(w, innerW, rows, data, small = false) {
   // TITLE_MAX of the space after the time), so every detail starts at the same place; text is cut off with "…"
   const lead = small ? 0 : S.TIME_W;
   const titleW = Math.min(Math.floor((innerW - lead) * TITLE_MAX), Math.ceil(Math.max(0, ...shown.map(it => title(it).length)) * CHAR_W) + COL_GAP);
-  if (!list.length) S.row(w, innerW, [{ text: data.noData ? "No data" : "Nothing going on" }]);
+  if (!list.length) S.row(w, innerW, [{ text: data.noData ? "No data" : empty }]);
   shown.forEach((it, i) => {
     if (i > 0) w.addSpacer(S.ROW_GAP);
     const cells = [];
@@ -254,4 +254,4 @@ function inlineLine(data) {
   return `${activeCount(data)} going on` + (stars ? ` · ${stars} ★` : "");
 }
 
-module.exports = { TITLE, KEY, askToken, token, load, items, pick, headRight, isStale, drawRows, buildWidget, buildLockRect, activeCount, inlineLine };
+module.exports = { TITLE, KEY, Rejected, fetchFeed, whenText, askToken, token, load, items, pick, headRight, isStale, drawRows, buildWidget, buildLockRect, activeCount, inlineLine };
