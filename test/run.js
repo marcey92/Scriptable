@@ -8,6 +8,8 @@ const root = path.join(__dirname, "..");
 
 let failures = 0;
 let feedCalls = null;
+const savedEvents = [];   // events scripts created with CalendarEvent.save(), kept across runs
+let nextId = 1;
 const files = {};   // fake Scriptable documents folder
 
 class Text {
@@ -116,14 +118,23 @@ async function run(file, opts = {}) {
       };
       return { iCloud: () => fm, local: () => fm };
     })(),
-    Calendar: { forEvents: async () => [{ title: "Home" }, { title: "you@gmail.com" }] },
-    CalendarEvent: {
-      today: async () => events.filter(e => e.startDate.toDateString() === now.toDateString()),
-      between: async (s, e, cals) => {
+    Calendar: {
+      forEvents: async () => [{ title: "Home" }, { title: "you@gmail.com" }],
+      defaultForEvents: async () => ({ title: "Home" }),
+      forEventsByTitle: async t => ({ title: t }),
+    },
+    CalendarEvent: class {
+      save() {
+        if (!this.identifier) { this.identifier = `ev${nextId++}`; savedEvents.push(this); }
+        this.cal = this.calendar && this.calendar.title;
+      }
+      remove() { const i = savedEvents.indexOf(this); if (i >= 0) savedEvents.splice(i, 1); }
+      static async today() { return [...events, ...savedEvents].filter(e => e.startDate.toDateString() === now.toDateString()); }
+      static async between(s, e, cals) {
         if (opts.noCalendar) throw new Error("denied");
         const names = cals.map(c => c.title);
-        return events.filter(ev => ev.startDate < e && ev.endDate > s && (!names.length || names.includes(ev.cal)));
-      },
+        return [...events, ...savedEvents].filter(ev => ev.startDate < e && ev.endDate > s && (!names.length || names.includes(ev.cal)));
+      }
     },
     Location: {
       setAccuracyToThreeKilometers: () => {},
@@ -325,6 +336,28 @@ async function run(file, opts = {}) {
     "the overview's Inbox header shows it too": ({ text }) => /^Inbox\s+Stale since/m.test(text),
   }, note: "stale inbox" });
   files["/docs/swiss-orders.json"] = savedCache2;
+
+  // events Hermes pushes to the calendar feed: added once, updated when changed, never duplicated
+  const inDays = (d, h) => { const x = new Date(); x.setDate(x.getDate() + d); x.setHours(h, 0, 0, 0); return x.toISOString(); };
+  const calFeed = ev => ({ calendar: { schema_version: 1, events: ev } });
+  const flight = { id: "tui-tom092", title: "Flight to Cancún (TUI TOM092)", start: inDays(2, 9), end: inDays(2, 20), location: "LGW", notes: "Booking ref" };
+  const checkin = { id: "tui-checkin", title: "Check in: TUI TOM092", start: inDays(1, 9) };
+  const count = t => savedEvents.filter(e => e.title === t).length;
+  await run("calendar-list.js", { token: "tok", feeds: calFeed([flight, checkin]), family: "large", expect: {
+    "both pushed events are added": () => count(flight.title) === 1 && count(checkin.title) === 1,
+    "a missing end becomes one hour": () => { const c = savedEvents.find(e => e.title === checkin.title); return c.endDate - c.startDate === 3600 * 1000; },
+    "they show in the widget": ({ text }) => text.includes("Check in: TUI TOM092"),
+  }, note: "calendar feed" });
+  await run("calendar-list.js", { token: "tok", feeds: calFeed([flight, checkin]), family: "large", expect: {
+    "a second refresh adds nothing": () => count(flight.title) === 1 && count(checkin.title) === 1 && savedEvents.length === 2,
+  }, note: "calendar feed again" });
+  await run("overview.js", { token: "tok", feeds: calFeed([{ ...flight, notes: "Gate closes 08:20" }, checkin]), family: "large", expect: {
+    "a changed event is updated in place, not duplicated": () => savedEvents.length === 2 && savedEvents.find(e => e.title === flight.title).notes === "Gate closes 08:20",
+  }, note: "calendar feed changed" });
+  await run("calendar-list.js", { token: "tok", feeds: {}, family: "large", expect: {
+    "no feed: nothing added, nothing removed": () => savedEvents.length === 2,
+  }, note: "no calendar feed" });
+  savedEvents.length = 0;   // the tests below expect only the stand-in calendar
 
   for (const family of ["large", "medium", "accessoryInline"]) await run("overview.js", { ...widgetOpts, family });
   await run("overview.js", { ...widgetOpts, family: "large", expect: {

@@ -55,9 +55,11 @@ if (!config.runsInWidget && tapped && H.HABITS.includes(tapped)) {
   await H.menu(await H.load());         // tapped the Habits header: the tick-off menu
 } else {
   // the first run in the app asks for calendar access and, if missing, the feed's read token
+  const token = await N.token();
+  await C.syncFromFeed(token);         // add any events Hermes pushed before reading the calendar
   const cal = await C.loadDays([]);
   const habits = await H.load();
-  const now = await N.load(await N.token());
+  const now = await N.load(token);
   const family = config.widgetFamily;
   const widget = family && family.startsWith("accessory") ? S.lockInline("Overview: use the large size") : build(cal, habits, now, await H.nextEvent());
   S.refresh(widget);

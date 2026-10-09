@@ -1,5 +1,6 @@
 const S = importModule("swiss");
 const C = importModule("lib-calendar");
+const N = importModule("lib-now");   // only for the feed token, to add the events Hermes pushes
 
 // Add this script as a widget more than once to get separate calendars.
 // Each widget can carry its own setting in the widget's "Parameter" field:
@@ -24,6 +25,7 @@ function settings() {
 
 // ---- run ----
 const { label, names } = settings();
+await C.syncFromFeed(await N.token());   // add any events Hermes pushed before reading the calendar
 const result = await C.loadDays(names);   // first run in the app triggers the calendar permission prompt
 const family = config.widgetFamily;
 const widget = family === "accessoryInline" ? S.lockInline(C.lockLines(result, 1)[0])
