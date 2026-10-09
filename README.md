@@ -9,6 +9,7 @@ Scriptable widgets for iOS in one fixed style: a title, a hairline rule, then ro
 | `battery.js` | Charge as a figure and a bar of boxes | Small, medium, Lock Screen |
 | `weather.js` | Hours, temperature, conditions, rain chance | Small, medium, large, Lock Screen |
 | `orders.js` | "Inbox": one list of parcels and important emails, urgent ones get a ★ (from the misc server) | Small, medium, large, Lock Screen |
+| `hermes.js` | What Hermes did on its own, one line each; header shows when it last ran. A failed calendar add on the phone shows as a ★ line | Small, medium, large |
 | `overview.js` | Calendar, habits and Inbox stacked in one widget; tap a habit row to tick today | Large |
 | `swiss.js` | The shared style. Not a widget; the others load it | |
 | `lib-calendar.js`, `lib-habits.js`, `lib-now.js` | The calendar, habit and Inbox logic, shared by their own widget and `overview.js`. Not widgets | |

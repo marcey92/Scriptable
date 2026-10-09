@@ -142,7 +142,20 @@ function readSync() {
 function writeSync(state) { try { syncFm.writeString(syncPath, JSON.stringify(state)); } catch (e) {} }
 const fingerprint = e => JSON.stringify([e.title, e.start, e.end || "", !!e.all_day, e.location || "", e.notes || ""]);
 
-// returns { added, updated } or { error }
+// the last real failure of the sync, shown by the Hermes widget: { at, message } or null. Being offline
+// isn't one (it passes), and neither is a 404 (no calendar.json pushed yet).
+const failPath = syncFm.joinPath(syncFm.documentsDirectory(), "swiss-calendar-sync-failure.json");
+function lastSyncFailure() {
+  try { return syncFm.fileExists(failPath) ? JSON.parse(syncFm.readString(failPath)) : null; } catch (e) { return null; }
+}
+function setSyncFailure(message) {
+  try {
+    if (message) syncFm.writeString(failPath, JSON.stringify({ at: Date.now(), message }));
+    else if (syncFm.fileExists(failPath)) syncFm.remove(failPath);
+  } catch (e) {}
+}
+
+// returns { added, updated, failed } or { error }
 async function syncFromFeed(token) {
   if (!token) return { error: "no token" };
   let json;
@@ -151,11 +164,14 @@ async function syncFromFeed(token) {
     req.headers = { Authorization: `Bearer ${token}` };
     req.timeoutInterval = 10;
     json = await req.loadJSON();
-    if (!req.response || req.response.statusCode !== 200) return { error: `HTTP ${req.response && req.response.statusCode}` };
-  } catch (e) { return { error: String(e.message || e) }; }
+    const status = req.response && req.response.statusCode;
+    if (status === 404) return { error: "no calendar feed" };
+    if (status !== 200) { setSyncFailure(`Calendar feed: HTTP ${status}`); return { error: `HTTP ${status}` }; }
+  } catch (e) { return { error: String(e.message || e) }; }   // offline: try again next refresh
 
   const state = readSync();
   let added = 0, updated = 0, calendar = null;
+  const failed = [];
   for (const e of Array.isArray(json.events) ? json.events : []) {
     const start = new Date(e.start);
     if (!e.id || !e.title || isNaN(start)) continue;
@@ -174,18 +190,21 @@ async function syncFromFeed(token) {
       calendar = calendar || (SYNC_CALENDAR ? await Calendar.forEventsByTitle(SYNC_CALENDAR) : await Calendar.defaultForEvents());
       ev.calendar = calendar;
     }
-    ev.title = e.title;
-    ev.startDate = start;
-    ev.endDate = end;
-    ev.isAllDay = !!e.all_day;
-    ev.location = e.location || "";
-    ev.notes = e.notes || "";
-    ev.save();
+    try {
+      ev.title = e.title;
+      ev.startDate = start;
+      ev.endDate = end;
+      ev.isAllDay = !!e.all_day;
+      ev.location = e.location || "";
+      ev.notes = e.notes || "";
+      ev.save();
+    } catch (err) { failed.push(e.title); continue; }
     state[e.id] = { identifier: ev.identifier, start: start.getTime(), end: end.getTime(), print };
     if (prev) updated++; else added++;
   }
   writeSync(state);
-  return { added, updated };
+  setSyncFailure(failed.length ? `Couldn't add ${failed.join(", ")}` : null);
+  return { added, updated, failed };
 }
 
 // ---- Lock Screen widgets ----
@@ -214,4 +233,4 @@ function buildLockRect(result) {
   return w;
 }
 
-module.exports = { syncFromFeed, loadDays, dayTitle, fitLines, drawUpcoming, buildWidget, buildLockRect, lockLines };
+module.exports = { syncFromFeed, lastSyncFailure, loadDays, dayTitle, fitLines, drawUpcoming, buildWidget, buildLockRect, lockLines };
