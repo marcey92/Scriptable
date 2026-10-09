@@ -129,6 +129,65 @@ function drawUpcoming(w, innerW, maxH, result, label) {
   });
 }
 
+// ---- events Hermes pushes to /widget/api/calendar ----
+// Each refresh adds them to the calendar, updates any Hermes changed, and skips ones already added
+// unchanged. It never deletes: an event dropped from the feed, or deleted by hand, is left alone.
+const SYNC_FEED = "https://misc.mrdrr.uk/widget/api/calendar";
+const SYNC_CALENDAR = "";   // calendar to add them to; "" = the default calendar
+const syncFm = FileManager.local();
+const syncPath = syncFm.joinPath(syncFm.documentsDirectory(), "swiss-calendar-sync.json");   // feed id -> event added
+function readSync() {
+  try { return syncFm.fileExists(syncPath) ? JSON.parse(syncFm.readString(syncPath)) : {}; } catch (e) { return {}; }
+}
+function writeSync(state) { try { syncFm.writeString(syncPath, JSON.stringify(state)); } catch (e) {} }
+const fingerprint = e => JSON.stringify([e.title, e.start, e.end || "", !!e.all_day, e.location || "", e.notes || ""]);
+
+// returns { added, updated } or { error }
+async function syncFromFeed(token) {
+  if (!token) return { error: "no token" };
+  let json;
+  try {
+    const req = new Request(SYNC_FEED);
+    req.headers = { Authorization: `Bearer ${token}` };
+    req.timeoutInterval = 10;
+    json = await req.loadJSON();
+    if (!req.response || req.response.statusCode !== 200) return { error: `HTTP ${req.response && req.response.statusCode}` };
+  } catch (e) { return { error: String(e.message || e) }; }
+
+  const state = readSync();
+  let added = 0, updated = 0, calendar = null;
+  for (const e of Array.isArray(json.events) ? json.events : []) {
+    const start = new Date(e.start);
+    if (!e.id || !e.title || isNaN(start)) continue;
+    const end = e.end && !isNaN(new Date(e.end)) ? new Date(e.end) : new Date(start.getTime() + 3600 * 1000);
+    const print = fingerprint(e);
+    const prev = state[e.id];
+    if (prev && prev.print === print) continue;   // added before and unchanged
+
+    let ev = null;
+    if (prev) {   // changed: find the event added before, by its identifier, around where it was
+      const near = await CalendarEvent.between(new Date(prev.start - 86400000), new Date(prev.end + 86400000), []);
+      ev = near.find(x => x.identifier === prev.identifier) || null;
+    }
+    if (!ev) {
+      ev = new CalendarEvent();
+      calendar = calendar || (SYNC_CALENDAR ? await Calendar.forEventsByTitle(SYNC_CALENDAR) : await Calendar.defaultForEvents());
+      ev.calendar = calendar;
+    }
+    ev.title = e.title;
+    ev.startDate = start;
+    ev.endDate = end;
+    ev.isAllDay = !!e.all_day;
+    ev.location = e.location || "";
+    ev.notes = e.notes || "";
+    ev.save();
+    state[e.id] = { identifier: ev.identifier, start: start.getTime(), end: end.getTime(), print };
+    if (prev) updated++; else added++;
+  }
+  writeSync(state);
+  return { added, updated };
+}
+
 // ---- Lock Screen widgets ----
 // upcoming events as short text lines, e.g. "14:00 Dentist", "Tmrw 09:00 Standup", "Sat 11:00 Brunch"
 function lockLines(result, max) {
@@ -155,4 +214,4 @@ function buildLockRect(result) {
   return w;
 }
 
-module.exports = { loadDays, dayTitle, fitLines, drawUpcoming, buildWidget, buildLockRect, lockLines };
+module.exports = { syncFromFeed, loadDays, dayTitle, fitLines, drawUpcoming, buildWidget, buildLockRect, lockLines };

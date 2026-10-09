@@ -38,6 +38,10 @@ After that, run `update.js` to pull changes from GitHub. For a private repo, put
 
 It shows one line per item in three columns, like the weather widget: the time (with a dot after it, "21:10·", if it was yesterday, or the date for anything older), the title with a ★ if it matters, and the detail. Whatever doesn't fit is left off, except that a starred item too far down takes the bottom row. If Hermes hasn't updated the feed for 90 minutes (its `updated` time, not when the phone last fetched), the Inbox header says "Stale since 14:02" and the list stays as it was. If the server can't be reached it draws the last good copy, judged the same way; with nothing cached it says "No data". It stays white on navy like the rest, with no colour.
 
+## Events from Hermes
+
+Each time the calendar widget or the overview refreshes, it fetches `https://misc.mrdrr.uk/widget/api/calendar` (same read token as the Inbox) and adds Hermes's events to the default calendar (`SYNC_CALENDAR` in `lib-calendar.js` picks another). An event Hermes changes is updated in place; one already added is skipped. Nothing is ever deleted. What it remembers is in `swiss-calendar-sync.json` in Scriptable's local folder.
+
 ## Google Calendar
 
 `calendar-list.js` reads whatever calendars the iPhone's Calendar app has. To show Google events:
