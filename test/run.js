@@ -422,6 +422,21 @@ async function run(file, opts = {}) {
     "tapping a habit row ticks it": ({ files }) => JSON.parse(files["/docs/habit-grid.json"]).Meditate.includes(new Date().toISOString().slice(0, 10)) !== JSON.parse(before).Meditate?.includes(new Date().toISOString().slice(0, 10)),
   }, note: "one-tap" });
 
+  for (const family of ["accessoryRectangular", "accessoryInline", "small"]) await run("quotes.js", { family });
+  await run("quotes.js", { family: "accessoryRectangular", expect: {
+    "a quote for today's weekday, white, up to four lines": ({ widget }) => { const t = widget.children[0]; return typeof t.text === "string" && t.text.length > 10 && t.lineLimit === 4; },
+    "redraws just after midnight": ({ widget }) => widget.refreshAfterDate > new Date() && widget.refreshAfterDate.getHours() === 0,
+  }, note: "quote" });
+  {
+    const src = fs.readFileSync(path.join(root, "quotes.js"), "utf8");
+    const quotes = [...src.matchAll(/^    "(.+)",$/gm)].map(m => m[1]);
+    const long = quotes.filter(q => q.length > 65);
+    console.log(`\n${long.length ? "FAIL" : "ok  "} quotes.js [${quotes.length} quotes, all short enough for four Lock Screen lines]`);
+    long.forEach(q => console.log("     ! too long: " + q));
+    if (quotes.length !== 28) { console.log("     ! expected 4 quotes for each of 7 days"); failures++; }
+    failures += long.length ? 1 : 0;
+  }
+
   await run("update.js", { inApp: true });
 
   console.log(`\n${failures ? failures + " failing" : "all passing"}`);
