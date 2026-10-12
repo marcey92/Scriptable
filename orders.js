@@ -16,6 +16,7 @@ const widget = family === "accessoryRectangular" ? N.buildLockRect(data)
   : family === "accessoryInline" ? S.lockInline(N.inlineLine(data))
   : N.buildWidget(data);
 S.refresh(widget);
+widget.url = N.MAIL_URL;   // tapping opens Mail
 
 if (config.runsInWidget) Script.setWidget(widget);
 else await widget.presentMedium();   // preview when run inside the app

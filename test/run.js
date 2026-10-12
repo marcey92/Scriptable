@@ -57,7 +57,7 @@ function height(w) {
   let h = 0;
   for (const c of w.children) {
     if (c.spacer !== undefined) h += c.spacer === "flex" ? 0 : c.spacer;
-    else if (c instanceof Stack) h += c.size ? c.size.height : 12;
+    else if (c instanceof Stack) h += c.size ? c.size.height : c.vertical ? height(c) : 12;
     else h += 15;
   }
   return h;
@@ -72,7 +72,7 @@ function describe(node) {
     if (node.backgroundColor) return node.backgroundColor.alpha === 1 ? "■" : "□";
     return null;
   }
-  return kids.join("  ");
+  return kids.join(node.vertical ? "\n" : "  ");
 }
 
 async function run(file, opts = {}) {
@@ -302,6 +302,7 @@ async function run(file, opts = {}) {
   const savedCache2 = files["/docs/swiss-orders.json"];
   await run("orders.js", { token: "tok", feeds: nowFeed, family: "medium", expect: {
     "items keep Hermes's order": ({ text }) => text.indexOf("Older first") < text.indexOf("Homes & Villas") && text.indexOf("Homes & Villas") < text.indexOf("Amazon"),
+    "tapping the Inbox widget opens Mail": ({ widget }) => widget.url === "message://",
     "title, then detail in its own column": ({ text }) => /★ Homes & Villas\s+Reply to your complaint/.test(text),
     "detail is its own left-aligned column, starting at the same place on every row": ({ widget }) => {
       const rows = widget.children.filter(c => c.children && c.children.length === 3 && c.size && c.size.height === 14);
@@ -401,6 +402,10 @@ async function run(file, opts = {}) {
     "a later day gets a real heading with a rule under it": ({ text }) => { const l = text.split("\n"); const i = l.findIndex(x => /^Tomorrow/.test(x)); return i > 0 && /^─/.test(l[i + 1]); },
   }, note: "contents" });
   await run("overview.js", { ...widgetOpts, family: "large", events: [], expect: {
+    "tapping the calendar opens Calendar, tapping the Inbox opens Mail": ({ widget }) => {
+      const urls = widget.children.filter(c => c.url).map(c => c.url);
+      return urls.includes("calshow://") && urls.includes("message://");
+    },
     "Inbox is pinned to the bottom: a flexible space before its header, none after its rows": ({ widget }) => {
       const kids = widget.children, last = kids[kids.length - 1];
       const flex = kids.map((c, i) => c.spacer === "flex" ? i : -1).filter(i => i >= 0);
