@@ -401,6 +401,11 @@ async function run(file, opts = {}) {
     "a later day gets a real heading with a rule under it": ({ text }) => { const l = text.split("\n"); const i = l.findIndex(x => /^Tomorrow/.test(x)); return i > 0 && /^─/.test(l[i + 1]); },
   }, note: "contents" });
   await run("overview.js", { ...widgetOpts, family: "large", events: [], expect: {
+    "Inbox is pinned to the bottom: a flexible space before its header, none after its rows": ({ widget }) => {
+      const kids = widget.children, last = kids[kids.length - 1];
+      const flex = kids.map((c, i) => c.spacer === "flex" ? i : -1).filter(i => i >= 0);
+      return flex.length === 1 && last.spacer === undefined;
+    },
     "an empty week still leaves Now its rows": ({ text }) => text.includes("Nothing this week") && text.includes("Zalando") && text.includes("Amazon"),
   }, note: "empty calendar" });
   await run("overview.js", { ...widgetOpts, inApp: true, note: "preview" });
