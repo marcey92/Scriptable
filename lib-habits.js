@@ -119,19 +119,18 @@ function drawRows(w, innerW, cell, data, runURL) {
 }
 
 // ---- Lock Screen widgets ----
-// rectangular: one row per habit, no names, today set apart on the right
+// rectangular: one row per habit, no names, one continuous run of days ending with today on the right
 function buildLockRect(data) {
   const w = S.lockWidget();
   // shrink the boxes when there are more habits, so every row fits the slot
-  const gap = S.BOX_GAP, todayGap = 7, n = HABITS.length;
+  const gap = S.BOX_GAP, n = HABITS.length;
   const rowGap = LOCK_TITLE || n > 3 ? 3 : 5;
   const roomH = LOCK_H - (LOCK_TITLE ? 22 : 0) - (n - 1) * rowGap;
   const box = Math.max(5, Math.min(S.LOCK_BOX, Math.floor(roomH / n)));
-  const past = Math.max(1, Math.floor((S.LOCK_W - box - todayGap + gap) / (box + gap)));
-  const days = lastDays(past + 1);
-  const today = days.pop();
+  const count = Math.max(1, Math.floor((S.LOCK_W + gap) / (box + gap)));
+  const days = lastDays(count);
 
-  if (LOCK_TITLE) S.lockHeader(w, past * (box + gap) - gap + todayGap + box, TITLE);
+  if (LOCK_TITLE) S.lockHeader(w, count * (box + gap) - gap, TITLE);
 
   HABITS.forEach((h, i) => {
     if (i > 0) w.addSpacer(rowGap);
@@ -140,8 +139,6 @@ function buildLockRect(data) {
       if (j > 0) row.addSpacer(gap);
       S.box(row, box, isDone(data, h, d), true);
     });
-    row.addSpacer(todayGap);
-    S.box(row, box, isDone(data, h, today), true);
     row.addSpacer();
   });
   return w;
