@@ -38,11 +38,14 @@ function build(cal, habits, now, eventTitle) {
   S.header(w, innerW, first ? C.dayTitle(first.offset, first.date, "") : "Today", S.dayMonth(first ? first.date : new Date()));
   C.drawUpcoming(w, innerW, calH, cal, "");
 
+  // Inbox sits on the bottom edge: any height left over (a short Inbox list, or a slot taller than
+  // planned) becomes space above it, never a gap at the bottom
   w.addSpacer(S.SECTION_GAP);
+  w.addSpacer();
   S.header(w, innerW, N.TITLE, N.headRight(now));
   N.drawRows(w, innerW, nowRows, now);
 
-  return S.finish(w);
+  return S.refresh(w);
 }
 
 // ---- run ----
