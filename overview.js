@@ -5,7 +5,9 @@ const N = importModule("lib-now");
 
 // Overview: habits, calendar and "Inbox" in one large widget, stacked under their own headers.
 // Each part is drawn by the same code as its own widget (lib-calendar, lib-habits, lib-now).
-// As in the habit widget, tapping a habit row ticks it for today and tapping the Habits header opens the menu.
+// As in the habit widget, tapping a habit row ticks it for today and tapping the Habits header opens the menu;
+// tapping the calendar opens the Calendar app, and tapping the Inbox opens Mail.
+const CALENDAR_URL = "calshow://";   // opens the Calendar app
 const NOW_MIN_ROWS = 3;   // the calendar never leaves Inbox fewer rows than this
 
 function build(cal, habits, now, eventTitle) {
@@ -33,17 +35,21 @@ function build(cal, habits, now, eventTitle) {
   head.url = `${runURL}?menu=1`;
   H.drawRows(w, innerW, S.ROW, habits, runURL);
 
+  // calendar: tapping anywhere in it opens the Calendar app
   w.addSpacer(S.SECTION_GAP);
+  const calBox = w.addStack(); calBox.layoutVertically(); calBox.url = CALENDAR_URL;
   const first = (cal.days || [])[0];
-  S.header(w, innerW, first ? C.dayTitle(first.offset, first.date, "") : "Today", S.dayMonth(first ? first.date : new Date()));
-  C.drawUpcoming(w, innerW, calH, cal, "");
+  S.header(calBox, innerW, first ? C.dayTitle(first.offset, first.date, "") : "Today", S.dayMonth(first ? first.date : new Date()));
+  C.drawUpcoming(calBox, innerW, calH, cal, "");
 
   // Inbox sits on the bottom edge: any height left over (a short Inbox list, or a slot taller than
   // planned) becomes space above it, never a gap at the bottom
+  // and tapping the Inbox opens Mail
   w.addSpacer(S.SECTION_GAP);
   w.addSpacer();
-  S.header(w, innerW, N.TITLE, N.headRight(now));
-  N.drawRows(w, innerW, nowRows, now);
+  const inBox = w.addStack(); inBox.layoutVertically(); inBox.url = N.MAIL_URL;
+  S.header(inBox, innerW, N.TITLE, N.headRight(now));
+  N.drawRows(inBox, innerW, nowRows, now);
 
   return S.refresh(w);
 }

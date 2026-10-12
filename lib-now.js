@@ -9,6 +9,7 @@ const S = importModule("swiss");
 const BASE = "https://misc.mrdrr.uk/widget/api/";
 const KEY = "misc-widget-read-token";   // the read token lives in the Keychain, never in this file
 const TITLE = "Inbox";
+const MAIL_URL = "message://";   // tapping the Inbox opens the Mail app
 const HIDE_DELIVERED_AFTER_H = 48;
 const STALE_MIN = 90;      // the feed counts as stale when Hermes last ran longer ago than this
 const CHAR_W = 6.4;         // average width of one character at the row text size, to size the title column
@@ -254,4 +255,4 @@ function inlineLine(data) {
   return `${activeCount(data)} going on` + (stars ? ` · ${stars} ★` : "");
 }
 
-module.exports = { TITLE, KEY, Rejected, fetchFeed, whenText, askToken, token, load, items, pick, headRight, isStale, drawRows, buildWidget, buildLockRect, activeCount, inlineLine };
+module.exports = { TITLE, MAIL_URL, KEY, Rejected, fetchFeed, whenText, askToken, token, load, items, pick, headRight, isStale, drawRows, buildWidget, buildLockRect, activeCount, inlineLine };
