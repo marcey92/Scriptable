@@ -1,51 +1,52 @@
 const S = importModule("swiss");
 
-// Daily motivation, in the spirit of the office poster: one quote a day for the Lock Screen.
+// Daily motivation, in the spirit of the office poster taken far too seriously: one hustle slogan a
+// day for the Lock Screen.
 // Each weekday has its own quotes (Mondays sound like Mondays), rotating weekly, so the same
 // weekday repeats only after QUOTES[day].length weeks. Edit freely; keep each under ~65 characters
 // so it fits the rectangular Lock Screen slot in four lines.
 const QUOTES = {
   Monday: [
-    "Let's circle back to the weekend you didn't have.",
-    "A fresh week. A fresh chance to align on alignment.",
-    "Your inbox missed you. It told everyone.",
-    "Hit the ground running. The ground is a meeting.",
+    "Rise and grind. Sleep is what your competitors do.",
+    "Start the week at 110%. Finish it at 140%.",
+    "Monday is not a day. It is a deliverable.",
+    "Don't count the hours. Bill them.",
   ],
   Tuesday: [
-    "Every task is a quick one until you open it.",
-    "Be the synergy you want to see in the deck.",
-    "If it isn't in a spreadsheet, did you even feel it?",
-    "Think outside the box. Then put it back in the box.",
+    "Every email answered is a step toward more email.",
+    "Work smarter, then harder, then both at lunch.",
+    "Your to-do list believes in you. Prove it right.",
+    "Success is just a meeting you haven't booked yet.",
   ],
   Wednesday: [
-    "Halfway there. Please update the tracker.",
-    "This meeting could have been an email. So could you.",
-    "Let's take this offline, then never speak of it again.",
-    "Bandwidth is a state of mind. Yours is full.",
+    "Push through the midweek. The KPIs are watching.",
+    "Lunch is a tool. Eat it at your desk.",
+    "Productivity is a lifestyle. Choose it hourly.",
+    "Climb the ladder. Rest on the rungs never.",
   ],
   Thursday: [
-    "Per my last email, which you have bravely ignored.",
-    "Low-hanging fruit is still fruit. Climb.",
-    "Stretch goals: now with extra stretch.",
-    "Quick sync? Clear your afternoon.",
+    "Deadlines are not limits. They are invitations.",
+    "Give 100%. Then give the other 20% too.",
+    "Turn every coffee into a deliverable.",
+    "Champions answer Slack in the shower.",
   ],
   Friday: [
-    "Friday: the deadline for everything due Monday.",
-    "Wins of the week: you attended.",
-    "Let's park this until it dies of natural causes.",
-    "Logging off is a mindset. Not yours, yet.",
+    "Finish strong. Then start Monday's work early.",
+    "Leave nothing on the table except your open laptop.",
+    "The weekend is earned. Have you earned it?",
+    "Log off when the work is done. The work is never done.",
   ],
   Saturday: [
-    "Rest is just pre-work for Monday.",
-    "Weekends are optional. Like lunch.",
-    "No one is emailing you. Yet.",
-    "Touch grass. Report back by EOD.",
+    "Weekends are just weekdays with better lighting.",
+    "Rest fast. The market isn't sleeping.",
+    "Saturday is a great day to get ahead of Monday.",
+    "Hobbies are side projects you haven't monetised yet.",
   ],
   Sunday: [
-    "The Sunday scaries are just engagement.",
-    "Tomorrow is a great day to be on mute.",
-    "Reflect on your growth areas. All of them.",
-    "Your out-of-office expires in twelve hours.",
+    "Sunday is Monday's warm-up. Stretch your inbox.",
+    "Plan the week. Then plan the plan.",
+    "Recharge at double speed. Results wait for no one.",
+    "Dream big. Then put it on the quarterly roadmap.",
   ],
 };
 
