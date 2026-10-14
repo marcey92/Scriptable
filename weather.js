@@ -6,6 +6,8 @@ const STEP = 3;             // hours between rows
 const UNITS = "celsius";    // or "fahrenheit"
 const TEMP_W = 34;
 const RAIN_W = 40;
+const WIND_W = 48;          // wind column, e.g. "14 mph"
+const UV_FROM = 3;          // UV is shown in the header from this level up (3 = moderate: worth sun cream)
 const TAP_URL = "weather://";   // tapping the widget opens Apple's Weather app
 
 // ---- cache: last known place and forecast, so the widget still draws offline ----
@@ -45,8 +47,8 @@ async function findPlace(cache) {
 async function fetchHours(place) {
   const url = "https://api.open-meteo.com/v1/forecast"
     + `?latitude=${place.lat}&longitude=${place.lon}`
-    + "&hourly=temperature_2m,precipitation_probability,weather_code"
-    + `&temperature_unit=${UNITS}&timeformat=unixtime&timezone=auto&forecast_days=3`;
+    + "&hourly=temperature_2m,precipitation_probability,weather_code,wind_speed_10m,uv_index"
+    + `&temperature_unit=${UNITS}&wind_speed_unit=mph&timeformat=unixtime&timezone=auto&forecast_days=3`;
   const json = await new Request(url).loadJSON();
   const h = json.hourly;
   return h.time.map((t, i) => ({
@@ -54,6 +56,8 @@ async function fetchHours(place) {
     temp: h.temperature_2m[i],
     rain: h.precipitation_probability ? h.precipitation_probability[i] : null,
     code: h.weather_code[i],
+    wind: h.wind_speed_10m ? h.wind_speed_10m[i] : null,
+    uv: h.uv_index ? h.uv_index[i] : null,
   }));
 }
 
@@ -88,6 +92,7 @@ function words(code) {
   return "";
 }
 const deg = v => (v === null || v === undefined ? "–" : `${Math.round(v)}°`);
+const mph = v => (v === null || v === undefined ? "" : `${Math.round(v)} mph`);
 const pct = v => (v === null || v === undefined ? "" : `${Math.round(v)}%`);
 
 // the current hour, then every STEP hours, up to `max` rows
@@ -102,6 +107,13 @@ function pick(hours, max) {
   return out;
 }
 
+// highest UV for the rest of today, rounded, or null when below UV_FROM
+function uvToday(hours) {
+  const now = Date.now(), end = S.dayStart(1).getTime();
+  const peak = Math.max(0, ...hours.filter(h => h.t + 3600 * 1000 > now && h.t < end && h.uv !== null && h.uv !== undefined).map(h => h.uv));
+  return peak >= UV_FROM ? Math.round(peak) : null;
+}
+
 // ---- Home Screen widget: a timetable of hours ----
 function buildWidget(data) {
   const w = S.widget();
@@ -114,7 +126,10 @@ function buildWidget(data) {
     return S.finish(w);
   }
 
-  S.header(w, innerW, TITLE, data.place.name || (small ? null : S.dateLabel()));
+  // the place, plus the UV peak still to come today when it's worth knowing ("London · UV 5")
+  const uv = uvToday(data.hours);
+  const place = data.place.name || (small ? null : S.dateLabel());
+  S.header(w, innerW, TITLE, uv && !small ? [place, `UV ${uv}`].filter(Boolean).join(" · ") : place);
   const rows = pick(data.hours, Math.min(S.rowsFor(availH, 1), Math.ceil(24 / STEP)));   // never past 24 hours
   if (!rows.length) S.note(w, innerW, "No forecast available");
   rows.forEach((r, i) => {
@@ -123,6 +138,7 @@ function buildWidget(data) {
       { text: r.label, w: S.TIME_W, mono: true },
       { text: deg(r.temp), w: TEMP_W, mono: true },
       { text: small ? "" : words(r.code) },
+      ...(small ? [] : [{ text: mph(r.wind), w: WIND_W, mono: true, right: true }]),
       { text: pct(r.rain), w: RAIN_W, mono: true, right: true },
     ]);
   });
