@@ -157,7 +157,8 @@ async function run(file, opts = {}) {
         const t0 = Math.floor(new Date(now).setHours(0, 0, 0, 0) / 1000);
         const n = 72, time = [], temp = [], rain = [], code = [];
         for (let i = 0; i < n; i++) { time.push(t0 + i * 3600); temp.push(10 + (i % 24) / 3); rain.push(opts.dry ? 5 : (i * 7) % 100); code.push([0, 2, 3, 61, 80][i % 5]); }
-        return { hourly: { time, temperature_2m: temp, precipitation_probability: rain, weather_code: code } };
+        const wind = time.map((_, i) => 5 + (i % 6) * 4), uv = time.map((_, i) => opts.sunny ? 6 : Math.max(0, Math.sin(((i % 24) - 6) / 12 * Math.PI)));
+        return { hourly: { time, temperature_2m: temp, precipitation_probability: rain, weather_code: code, wind_speed_10m: wind, uv_index: uv } };
       }
     },
   };
@@ -221,6 +222,13 @@ async function run(file, opts = {}) {
   await run("weather.js", { family: "accessoryRectangular", dry: true, expect: {
     "low rain chances read as dry": ({ text }) => /^Dry next 12 hours$/m.test(text),
   }, note: "dry" });
+  await run("weather.js", { family: "medium", expect: {
+    "a wind column in mph": ({ text }) => /\d+°\s+\S.*\s+\d+ mph\s+\d+%/m.test(text),
+    "low UV stays out of the header": ({ text }) => !/UV/.test(text.split("\n")[0]),
+  }, note: "wind" });
+  await run("weather.js", { family: "medium", sunny: true, expect: {
+    "UV from 3 shows next to the place": ({ text }) => /^Weather\s+London · UV \d+$/.test(text.split("\n")[0]),
+  }, note: "sunny" });
   await run("weather.js", { family: "medium", offline: true, note: "offline, cached" });
   delete files["/docs/swiss-weather.json"];
   await run("weather.js", { family: "medium", offline: true, note: "offline, no cache" });
