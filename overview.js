@@ -20,15 +20,15 @@ function build(cal, habits, now) {
     return S.finish(w);
   }
 
-  // rows left once the three headers, the gaps between sections and the habit rows are paid for,
-  // shared by the calendar and Inbox
-  const habitsH = H.HABITS.length * S.ROW + (H.HABITS.length - 1) * S.ROW_GAP;
-  const rest = availH - 3 * S.HEAD_H - 2 * S.SECTION_GAP - habitsH;
-  const shared = Math.max(2, Math.floor((rest + 2 * S.ROW_GAP) / (S.ROW + S.ROW_GAP)));   // rows in both lists together
-  // the calendar gets what it needs up to half, plus any rows Inbox has no items for
-  const calNeed = Math.max(1, C.comingUp(cal).length), nowNeed = Math.max(1, N.items(now).length);
-  const calRows = Math.max(1, Math.min(calNeed, Math.max(Math.ceil(shared / 2), shared - nowNeed), shared - Math.min(NOW_MIN_ROWS, nowNeed)));
-  const nowRows = Math.max(1, shared - calRows);
+  // height left once the three headers, the gaps between sections and the habit rows are paid for,
+  // shared by the calendar and Inbox: the calendar takes what it needs up to half, plus whatever Inbox
+  // has no items for; Inbox keeps at least NOW_MIN_ROWS (or as many as it has items)
+  const rowsH = k => k * S.ROW + Math.max(0, k - 1) * S.ROW_GAP;
+  const rest = availH - 3 * S.HEAD_H - 2 * S.SECTION_GAP - rowsH(H.HABITS.length);
+  const nowNeed = Math.max(1, N.items(now).length);
+  const cap = Math.min(Math.max(Math.ceil(rest / 2), rest - rowsH(nowNeed)), rest - rowsH(Math.min(NOW_MIN_ROWS, nowNeed)));
+  const calH = C.fitLines(cal, Math.max(S.ROW, cap)).height;
+  const nowRows = Math.max(1, Math.floor((rest - calH + S.ROW_GAP) / (S.ROW + S.ROW_GAP)));
 
   // habits first; tap the header for the menu
   const runURL = URLScheme.forRunningScript();
@@ -39,8 +39,9 @@ function build(cal, habits, now) {
   // calendar: tapping anywhere in it opens the Calendar app
   w.addSpacer(S.SECTION_GAP);
   const calBox = w.addStack(); calBox.layoutVertically(); calBox.url = CALENDAR_URL;
-  S.header(calBox, innerW, "Calendar", null);
-  C.drawComingUp(calBox, innerW, calRows, cal);
+  const head1 = C.firstHeading(cal);
+  S.header(calBox, innerW, head1.title, head1.right);
+  C.drawUpcoming(calBox, innerW, calH, cal);
 
   // Inbox sits on the bottom edge: any height left over (a short Inbox list, or a slot taller than
   // planned) becomes space above it, never a gap at the bottom
@@ -66,7 +67,7 @@ if (!config.runsInWidget && tapped && H.HABITS.includes(tapped)) {
   // the first run in the app asks for calendar access and, if missing, the feed's read token
   const token = await N.token();
   await C.syncFromFeed(token);         // add any events Hermes pushed before reading the calendar
-  const cal = await C.loadDays([]);
+  const cal = await C.loadDays([], true);   // all-day events too: they go in the day headings
   const habits = await H.load();
   const now = await N.load(token);
   const family = config.widgetFamily;
