@@ -91,7 +91,7 @@ function comingUp(result) {
   const rows = [];
   for (const d of result.days || []) {
     d.events.forEach((e, i) => rows.push({
-      day: i > 0 ? "" : S.WD[d.date.getDay()].slice(0, 3),
+      day: i > 0 ? "" : S.WD[d.date.getDay()].slice(0, 3).toUpperCase(),
       time: e.isAllDay ? "—" : S.timeLabel(e.startDate),
       title: e.title,
     }));

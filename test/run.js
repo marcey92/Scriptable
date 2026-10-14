@@ -390,9 +390,9 @@ async function run(file, opts = {}) {
   await run("overview.js", { ...widgetOpts, family: "large", expect: {
     "three sections in order: habits, calendar, inbox": ({ text }) => { const l = text.split("\n"); const h = l.findIndex(x => /^Habits/.test(x)), c = l.findIndex(x => /^Calendar/.test(x)), i = l.findIndex(x => /^Inbox/.test(x)); return h === 0 && h < c && c < i; },
     "one calendar heading, no per-day headings": ({ text }) => !/^(Today|Tomorrow)/m.test(text),
-    "today's first event shows its weekday too": ({ text }) => /^[A-Z][a-z]{2}\s+23:30\s+Late dinner$/m.test(text),
+    "today's first event shows its weekday too": ({ text }) => /^[A-Z]{3}\s+23:30\s+Late dinner$/m.test(text),
     "the Habits header shows the date, not the next event": ({ text }) => /^Habits\s+[A-Z][a-z]{2} \d\d\.\d\d$/.test(text.split("\n")[0]),
-    "other days start with their weekday": ({ text }) => /^[A-Z][a-z]{2}\s+14:00\s+Psychoanalysis/m.test(text),
+    "other days start with their weekday": ({ text }) => /^[A-Z]{3}\s+14:00\s+Psychoanalysis/m.test(text),
     "habit rows are drawn": ({ text }) => /^Anki/m.test(text) && /^Gratitude/m.test(text),
     "calendar rows are drawn": ({ text }) => text.includes("Late dinner"),
     "now rows are drawn": ({ text }) => text.includes("★ Parcel"),
@@ -415,7 +415,7 @@ async function run(file, opts = {}) {
     const busy = [];
     for (let d = 1; d <= 6; d++) for (const h of [10, 14]) busy.push({ title: `Event ${d}-${h}`, startDate: at(d, h), endDate: at(d, h + 1), isAllDay: false, cal: "Home" });
     await run("overview.js", { ...widgetOpts, events: busy, family: "large", expect: {
-      "a day's second event leaves the weekday blank": ({ text }) => /^[A-Z][a-z]{2}\s+10:00\s+Event 1-10$/m.test(text) && /^\s+14:00\s+Event 1-14$/m.test(text),
+      "a day's second event leaves the weekday blank": ({ text }) => /^[A-Z]{3}\s+10:00\s+Event 1-10$/m.test(text) && /^\s+14:00\s+Event 1-14$/m.test(text),
       "a busy calendar takes at most half the shared rows": ({ text }) => { const l = text.split("\n"); const c = l.findIndex(x => /^Calendar/.test(x)), i = l.findIndex(x => /^Inbox/.test(x)); const cal = i - c - 2, inbox = l.length - i - 2; return cal <= inbox + 1 && inbox >= 3; },
     }, note: "busy calendar" });
     const short = { now: { schema_version: 2, updated: iso(0), items: [
