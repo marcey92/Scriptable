@@ -21,13 +21,13 @@ function build(cal, habits, now, eventTitle) {
     return S.finish(w);
   }
 
-  // height left once the three headers, the gaps between sections and the habit rows are paid for,
-  // shared by calendar and Inbox: the calendar takes what it needs up to half, Inbox gets the rest
-  const rowsH = k => k * S.ROW + Math.max(0, k - 1) * S.ROW_GAP;
-  const rest = availH - 3 * S.HEAD_H - 2 * S.SECTION_GAP - rowsH(H.HABITS.length);
-  const cap = Math.max(S.ROW, Math.min(rest - rowsH(NOW_MIN_ROWS), Math.ceil(rest / 2)));
-  const calH = C.fitLines(cal, cap).height;
-  const nowRows = Math.max(1, Math.floor((rest - calH + S.ROW_GAP) / (S.ROW + S.ROW_GAP)));
+  // rows left once the three headers, the gaps between sections and the habit rows are paid for,
+  // shared by the calendar and Inbox: the calendar takes what it needs up to half, Inbox gets the rest
+  const habitsH = H.HABITS.length * S.ROW + (H.HABITS.length - 1) * S.ROW_GAP;
+  const rest = availH - 3 * S.HEAD_H - 2 * S.SECTION_GAP - habitsH;
+  const shared = Math.max(2, Math.floor((rest + 2 * S.ROW_GAP) / (S.ROW + S.ROW_GAP)));   // rows in both lists together
+  const calRows = Math.max(1, Math.min(C.comingUp(cal).length, Math.ceil(shared / 2), shared - NOW_MIN_ROWS));
+  const nowRows = Math.max(1, shared - calRows);
 
   // habits first, with the same header as the habit widget: next event today (or the date); tap for the menu
   const runURL = URLScheme.forRunningScript();
@@ -38,9 +38,8 @@ function build(cal, habits, now, eventTitle) {
   // calendar: tapping anywhere in it opens the Calendar app
   w.addSpacer(S.SECTION_GAP);
   const calBox = w.addStack(); calBox.layoutVertically(); calBox.url = CALENDAR_URL;
-  const first = (cal.days || [])[0];
-  S.header(calBox, innerW, first ? C.dayTitle(first.offset, first.date, "") : "Today", S.dayMonth(first ? first.date : new Date()));
-  C.drawUpcoming(calBox, innerW, calH, cal, "");
+  S.header(calBox, innerW, "Coming up", null);
+  C.drawComingUp(calBox, innerW, calRows, cal);
 
   // Inbox sits on the bottom edge: any height left over (a short Inbox list, or a slot taller than
   // planned) becomes space above it, never a gap at the bottom

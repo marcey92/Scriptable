@@ -83,49 +83,29 @@ function buildWidget(result, label) {
   return S.finish(w);
 }
 
-// upcoming events as lines: events of the first day, then for each later day a label line and its events
-function upcomingLines(result) {
-  const out = [];
-  (result.days || []).forEach((d, i) => {
-    if (i > 0) out.push({ day: d });
-    for (const e of d.events) out.push({ event: e });
-  });
-  return out;
-}
-
-// height of each kind of line: an event row, and a later day's heading (a section gap, then a header)
-const EVENT_H = S.ROW, DAY_H = S.SECTION_GAP + S.HEAD_H;
-
-// the lines that fit in `maxH` points, never ending on a day heading with no event under it.
-// Returns { lines, height }.
-function fitLines(result, maxH) {
-  const lines = [];
-  let h = 0;
-  for (const l of upcomingLines(result)) {
-    const prev = lines[lines.length - 1];
-    const cost = l.day ? DAY_H : EVENT_H + (prev && !prev.day ? S.ROW_GAP : 0);
-    if (h + cost > maxH) break;
-    lines.push(l); h += cost;
+// "Coming up" in the overview: one list of events under a single heading, each row with a day column
+// (the weekday on a day's first event only; blank for today) and a time column ("—" for all day)
+const DAY_W = 32;
+function comingUp(result) {
+  const rows = [];
+  for (const d of result.days || []) {
+    d.events.forEach((e, i) => rows.push({
+      day: d.offset === 0 || i > 0 ? "" : S.WD[d.date.getDay()].slice(0, 3),
+      time: e.isAllDay ? "—" : S.timeLabel(e.startDate),
+      title: e.title,
+    }));
   }
-  while (lines.length && lines[lines.length - 1].day) { lines.pop(); h -= DAY_H; }
-  return { lines, height: Math.max(h, EVENT_H) };
+  return rows;
 }
-
-// upcoming events in `maxH` points under a header that already names the first day; each later day
-// gets its own heading (used by the overview widget)
-function drawUpcoming(w, innerW, maxH, result, label) {
-  if (result.error || !(result.days || []).length) {
+function drawComingUp(w, innerW, rows, result) {
+  const list = comingUp(result);
+  if (result.error || !list.length) {
     S.row(w, innerW, [{ text: result.error || "Nothing this week" }]);
     return;
   }
-  fitLines(result, maxH).lines.forEach((l, i, all) => {
-    if (l.day) {
-      w.addSpacer(S.SECTION_GAP);
-      S.header(w, innerW, dayTitle(l.day.offset, l.day.date, label), S.dayMonth(l.day.date));
-      return;
-    }
-    if (i > 0 && !all[i - 1].day) w.addSpacer(S.ROW_GAP);
-    S.row(w, innerW, [{ text: l.event.isAllDay ? "—" : S.timeLabel(l.event.startDate), w: S.TIME_W, mono: true }, { text: l.event.title }]);
+  list.slice(0, rows).forEach((r, i) => {
+    if (i > 0) w.addSpacer(S.ROW_GAP);
+    S.row(w, innerW, [{ text: r.day, w: DAY_W, mono: true }, { text: r.time, w: S.TIME_W, mono: true }, { text: r.title }]);
   });
 }
 
@@ -233,4 +213,4 @@ function buildLockRect(result) {
   return w;
 }
 
-module.exports = { syncFromFeed, lastSyncFailure, loadDays, dayTitle, fitLines, drawUpcoming, buildWidget, buildLockRect, lockLines };
+module.exports = { syncFromFeed, lastSyncFailure, loadDays, dayTitle, comingUp, drawComingUp, buildWidget, buildLockRect, lockLines };

@@ -1,17 +1,14 @@
 // Desk check: runs each widget script against a stand-in for Scriptable's API and prints
 // what it would draw. It catches crashes and layout arithmetic, not how iOS renders things.
 // Usage: node test/run.js
-
 const fs = require("fs");
 const path = require("path");
 const root = path.join(__dirname, "..");
-
 let failures = 0;
 let feedCalls = null;
 const savedEvents = [];   // events scripts created with CalendarEvent.save(), kept across runs
 let nextId = 1;
 const files = {};   // fake Scriptable documents folder
-
 class Text {
   constructor(t) { this.text = t; }
 }
@@ -32,7 +29,6 @@ class ListWidget extends Stack {
   async presentMedium() { this.presented = "medium"; }
   async presentLarge() { this.presented = "large"; }
 }
-
 // width a row of fixed-size children needs, to check it fits its stack
 function fixedWidth(s) {
   if (s.vertical) return Math.max(0, ...s.children.filter(c => c instanceof Stack && c.size).map(c => c.size.width));
@@ -74,7 +70,6 @@ function describe(node) {
   }
   return kids.join(node.vertical ? "\n" : "  ");
 }
-
 async function run(file, opts = {}) {
   const now = new Date();
   const at = (dayOffset, h, m = 0) => { const d = new Date(now); d.setDate(d.getDate() + dayOffset); d.setHours(h, m, 0, 0); return d; };
@@ -84,7 +79,6 @@ async function run(file, opts = {}) {
     { title: "Brunch", startDate: at(3, 11), endDate: at(3, 12), isAllDay: false, cal: "Home" },
   ];
   let widget = null, alerts = 0, keychainSet = null;
-
   const g = {
     console: { log: () => {} },
     config: { runsInWidget: opts.inApp ? false : true, widgetFamily: opts.family },
@@ -168,7 +162,6 @@ async function run(file, opts = {}) {
     new Function(...Object.keys(g), "module", src)(...Object.values(g), m);
     return m.exports;
   };
-
   const src = fs.readFileSync(path.join(root, file), "utf8");
   const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
   const label = `${file} [${opts.inApp ? "in app" : opts.family}${opts.note ? ", " + opts.note : ""}]`;
@@ -193,28 +186,23 @@ async function run(file, opts = {}) {
     console.log(`\nFAIL ${label}\n     ! ${e.stack.split("\n").slice(0, 3).join("\n       ")}`);
   }
 }
-
 (async () => {
   const home = ["small", "medium", "large"];
   const lock = ["accessoryRectangular", "accessoryCircular", "accessoryInline"];
-
   files["/docs/habit-grid.json"] = JSON.stringify({ Anki: [new Date().toISOString().slice(0, 10)] });
   for (const family of ["medium", "large", ...lock]) await run("habit-grid.js", { family });
   await run("habit-grid.js", { inApp: true, note: "menu" });
   await run("habit-grid.js", { inApp: true, query: { habit: "Meditate" }, note: "one-tap" });
   await run("habit-grid.js", { family: "medium", note: "after one-tap" });
-
   for (const family of [...home, "accessoryRectangular", "accessoryInline"]) await run("calendar-list.js", { family });
   await run("calendar-list.js", { family: "medium", param: "Google: you@gmail.com", note: "Google parameter" });
   await run("calendar-list.js", { family: "medium", param: "Nope", note: "unknown calendar" });
   await run("calendar-list.js", { family: "medium", events: [], note: "empty week" });
   await run("calendar-list.js", { family: "medium", noCalendar: true, note: "no access" });
   await run("calendar-list.js", { inApp: true });
-
   for (const family of [...home, ...lock]) await run("battery.js", { family });
   await run("battery.js", { family: "medium", battery: 1, charging: true, note: "100%, charging" });
   await run("battery.js", { family: "small", battery: 0.03, note: "3%" });
-
   for (const family of [...home, ...lock]) await run("weather.js", { family });
   await run("weather.js", { family: "accessoryRectangular", expect: {
     "header, then now, range and rain": ({ text }) => /^Weather/.test(text) && /^\d+°  \w/m.test(text) && /^Low -?\d+° · High -?\d+°$/m.test(text) && /^Rain \d+% at \d\d:\d\d$/m.test(text),
@@ -237,7 +225,6 @@ async function run(file, opts = {}) {
   delete files["/docs/swiss-weather.json"];
   await run("weather.js", { family: "medium", offline: true, note: "offline, no cache" });
   await run("weather.js", { family: "medium", noLocation: true, note: "no location" });
-
   const iso = h => new Date(Date.now() - h * 3600 * 1000).toISOString();
   const feeds = {
     orders: { schema_version: 1, updated: iso(0), orders: [
@@ -302,7 +289,6 @@ async function run(file, opts = {}) {
   await run("orders.js", { feeds, token: "nope", inApp: true, typedToken: "tok", expect: {
     "wrong token can be replaced in the app": ({ keychainSet }) => keychainSet === "tok",
   }, note: "wrong token, re-enter" });
-
   // the single now feed: Hermes's order and wording, drawn as given
   const nowFeed = { now: { schema_version: 2, updated: iso(0), items: [
     { when: iso(30), star: false, title: "Older first", detail: "Hermes put me on top" },
@@ -350,7 +336,6 @@ async function run(file, opts = {}) {
     "the overview's Inbox header shows it too": ({ text }) => /^Inbox\s+Stale since/m.test(text),
   }, note: "stale inbox" });
   files["/docs/swiss-orders.json"] = savedCache2;
-
   // events Hermes pushes to the calendar feed: added once, updated when changed, never duplicated
   const inDays = (d, h) => { const x = new Date(); x.setDate(x.getDate() + d); x.setHours(h, 0, 0, 0); return x.toISOString(); };
   const calFeed = ev => ({ calendar: { schema_version: 1, events: ev } });
@@ -401,17 +386,17 @@ async function run(file, opts = {}) {
     "being offline is not a failure": ({ text }) => !text.includes("★"),
   }, note: "offline is fine" });
   savedEvents.length = 0;   // the tests below expect only the stand-in calendar
-
   for (const family of ["large", "medium", "accessoryInline"]) await run("overview.js", { ...widgetOpts, family });
   await run("overview.js", { ...widgetOpts, family: "large", expect: {
-    "three sections in order: habits, calendar, inbox": ({ text }) => { const l = text.split("\n"); const h = l.findIndex(x => /^Habits/.test(x)), c = l.findIndex(x => /^Today/.test(x)), i = l.findIndex(x => /^Inbox/.test(x)); return h === 0 && h < c && c < i; },
-    "calendar headings show the date only": ({ text }) => /^Today\s+\d\d\.\d\d$/m.test(text) && /^Tomorrow\s+\d\d\.\d\d$/m.test(text),
+    "three sections in order: habits, coming up, inbox": ({ text }) => { const l = text.split("\n"); const h = l.findIndex(x => /^Habits/.test(x)), c = l.findIndex(x => /^Coming up/.test(x)), i = l.findIndex(x => /^Inbox/.test(x)); return h === 0 && h < c && c < i; },
+    "one calendar heading, no per-day headings": ({ text }) => !/^(Today|Tomorrow)/m.test(text),
+    "today's events show just the time": ({ text }) => /^\s+23:30\s+Late dinner$/m.test(text),
+    "other days start with their weekday": ({ text }) => /^[A-Z][a-z]{2}\s+14:00\s+Psychoanalysis/m.test(text),
     "habits header shows the next event today, like the habit widget": ({ text }) => /^Habits\s+Late dinner/m.test(text),
     "habit rows are drawn": ({ text }) => /^Anki/m.test(text) && /^Gratitude/m.test(text),
     "calendar rows are drawn": ({ text }) => text.includes("Late dinner"),
     "now rows are drawn": ({ text }) => text.includes("★ Parcel"),
-    "calendar takes at most half the shared space": ({ text }) => !text.includes("Brunch"),
-    "a later day gets a real heading with a rule under it": ({ text }) => { const l = text.split("\n"); const i = l.findIndex(x => /^Tomorrow/.test(x)); return i > 0 && /^─/.test(l[i + 1]); },
+    "no habit counts: each row is a name and boxes": ({ text }) => /^Anki(\s+[□■])+$/m.test(text),
   }, note: "contents" });
   await run("overview.js", { ...widgetOpts, family: "large", events: [], expect: {
     "tapping the calendar opens Calendar, tapping the Inbox opens Mail": ({ widget }) => {
@@ -425,6 +410,15 @@ async function run(file, opts = {}) {
     },
     "an empty week still leaves Now its rows": ({ text }) => text.includes("Nothing this week") && text.includes("Zalando") && text.includes("Amazon"),
   }, note: "empty calendar" });
+  {
+    const at = (d, h) => { const x = new Date(); x.setDate(x.getDate() + d); x.setHours(h, 0, 0, 0); return x; };
+    const busy = [];
+    for (let d = 1; d <= 6; d++) for (const h of [10, 14]) busy.push({ title: `Event ${d}-${h}`, startDate: at(d, h), endDate: at(d, h + 1), isAllDay: false, cal: "Home" });
+    await run("overview.js", { ...widgetOpts, events: busy, family: "large", expect: {
+      "a day's second event leaves the weekday blank": ({ text }) => /^[A-Z][a-z]{2}\s+10:00\s+Event 1-10$/m.test(text) && /^\s+14:00\s+Event 1-14$/m.test(text),
+      "a busy calendar takes at most half the shared rows": ({ text }) => { const l = text.split("\n"); const c = l.findIndex(x => /^Coming up/.test(x)), i = l.findIndex(x => /^Inbox/.test(x)); const cal = i - c - 2, inbox = l.length - i - 2; return cal <= inbox + 1 && inbox >= 3; },
+    }, note: "busy calendar" });
+  }
   await run("overview.js", { ...widgetOpts, inApp: true, note: "preview" });
   await run("overview.js", { ...widgetOpts, inApp: true, query: { menu: "1" }, expect: {
     "tapping the Habits header opens the menu": ({ alerts, widget }) => alerts === 1 && !widget,
@@ -433,7 +427,6 @@ async function run(file, opts = {}) {
   await run("overview.js", { ...widgetOpts, inApp: true, query: { habit: "Meditate" }, expect: {
     "tapping a habit row ticks it": ({ files }) => JSON.parse(files["/docs/habit-grid.json"]).Meditate.includes(new Date().toISOString().slice(0, 10)) !== JSON.parse(before).Meditate?.includes(new Date().toISOString().slice(0, 10)),
   }, note: "one-tap" });
-
   for (const family of ["accessoryRectangular", "accessoryInline", "small"]) await run("quotes.js", { family });
   await run("quotes.js", { family: "accessoryRectangular", expect: {
     "a quote for today's weekday, white, up to four lines": ({ widget }) => { const t = widget.children[0]; return typeof t.text === "string" && t.text.length > 10 && t.lineLimit === 4; },
@@ -448,9 +441,7 @@ async function run(file, opts = {}) {
     if (quotes.length !== 28) { console.log("     ! expected 4 quotes for each of 7 days"); failures++; }
     failures += long.length ? 1 : 0;
   }
-
   await run("update.js", { inApp: true });
-
   console.log(`\n${failures ? failures + " failing" : "all passing"}`);
   process.exit(failures ? 1 : 0);
 })();
