@@ -37,15 +37,24 @@ S.dateLabel = (d = new Date()) => `${S.WD[d.getDay()].slice(0, 3)} ${S.dayMonth(
 S.timeLabel = d => `${S.p(d.getHours())}:${S.p(d.getMinutes())}`;
 
 // ---- layout ----
-// sizes for the slot the widget sits in
-S.metrics = () => {
+// Home Screen widget heights per iPhone screen size (points, from Apple's widget sizes): small/medium, large.
+// Unknown screens fall back to the smallest common heights, so nothing overflows.
+S.WIDGET_H = {
+  "430x932": [170, 382], "428x926": [170, 382], "414x896": [169, 379], "414x736": [159, 357],
+  "402x874": [158, 354], "393x852": [158, 354], "390x844": [158, 354],
+  "375x812": [155, 345], "360x780": [155, 345], "375x667": [148, 324], "320x568": [141, 311],
+};
+
+// sizes for the slot the widget sits in; `as` overrides the family (the in-app preview has none)
+S.metrics = (as) => {
   const s = Device.screenSize();
-  const family = config.widgetFamily || "medium";
+  const family = as || config.widgetFamily || "medium";
   const large = family === "large" || family === "extraLarge";
   const small = family === "small";
   const lock = family.startsWith("accessory");
   const innerW = small ? 130 : Math.max(260, Math.min(s.width, s.height) - 56 - 28);
-  const availH = large ? 312 : 117;
+  const [h, hLarge] = S.WIDGET_H[`${Math.min(s.width, s.height)}x${Math.max(s.width, s.height)}`] || [149, 344];
+  const availH = (large ? hLarge : h) - S.PAD[0] - S.PAD[2];
   return { family, large, small, lock, innerW, availH };
 };
 
