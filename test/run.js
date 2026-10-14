@@ -438,7 +438,7 @@ async function run(file, opts = {}) {
       { title: "TT", startDate: at(3, 12), endDate: at(3, 13), isAllDay: false, cal: "Home" },
     ];
     await run("overview.js", { ...widgetOpts, events: trip, family: "large", expect: {
-      "a multi-day all-day event shows once, on its first day": ({ text }) => (text.match(/Parents Canada/g) || []).length === 1,
+      "a multi-day all-day event is in every shown day's heading": ({ text }) => /^\s*Today\s+Parents Canada · /m.test(text) && /^Saturday\s+Parents Canada · /m.test(text),
       "days with only that repeat are skipped, so the next real event shows": ({ text }) => /^12:00\s+TT$/m.test(text) && !/^\s*Tomorrow/m.test(text),
     }, note: "multi-day all-day" });
     await run("overview.js", { ...widgetOpts, events: withAllDay, family: "large", expect: {

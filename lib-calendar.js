@@ -87,19 +87,18 @@ function buildWidget(result, label) {
 const PAIR_MAX = 11;   // two events share a line when both titles are at most this many characters
 const ALLDAY_MAX = 22; // all-day titles in a heading are cut to this many characters
 
-// the days as the overview shows them: an all-day event spanning several days appears only on the
-// first day it's listed; a day left with nothing new (only such repeats) is dropped
+// the days as the overview shows them: an all-day event spanning several days is in every shown day's
+// heading, but a day with nothing else (only an all-day event carried over from earlier) is dropped
 function overviewDays(result) {
   const seen = new Set(), out = [];
   for (const d of result.days || []) {
-    const events = d.events.filter(e => {
-      if (!e.isAllDay) return true;
+    let fresh = false;
+    for (const e of d.events) {
+      if (!e.isAllDay) { fresh = true; continue; }
       const key = `${e.title}|${e.startDate.getTime()}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-    if (events.length) out.push({ ...d, events });
+      if (!seen.has(key)) { seen.add(key); fresh = true; }
+    }
+    if (fresh) out.push(d);
   }
   return out;
 }
