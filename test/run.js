@@ -170,7 +170,7 @@ async function run(file, opts = {}) {
     const issues = [];
     if (widget) {
       check(widget, issues);
-      const m = { small: 117, medium: 117, large: 312 }[opts.family];
+      const m = { small: 126, medium: 126, large: 322 }[opts.family];   // 393x852 widget heights minus padding
       if (m && height(widget) > m + 0.01) issues.push(`content is ${height(widget)} tall, slot allows about ${m}`);
     } else if (!opts.inApp) issues.push("no widget was set");
     console.log(`\n${issues.length ? "FAIL" : "ok  "} ${label}`);
@@ -396,7 +396,7 @@ async function run(file, opts = {}) {
     "habit rows are drawn": ({ text }) => /^Anki/m.test(text) && /^Gratitude/m.test(text),
     "calendar rows are drawn": ({ text }) => text.includes("Late dinner"),
     "now rows are drawn": ({ text }) => text.includes("★ Parcel"),
-    "no habit counts: each row is a name and boxes": ({ text }) => /^Anki(\s+[□■])+$/m.test(text),
+    "habit rows end with their count": ({ text }) => /^Anki(\s+[□■])+\s+\d\d$/m.test(text),
   }, note: "contents" });
   await run("overview.js", { ...widgetOpts, family: "large", events: [], expect: {
     "tapping the calendar opens Calendar, tapping the Inbox opens Mail": ({ widget }) => {
@@ -418,6 +418,13 @@ async function run(file, opts = {}) {
       "a day's second event leaves the weekday blank": ({ text }) => /^[A-Z][a-z]{2}\s+10:00\s+Event 1-10$/m.test(text) && /^\s+14:00\s+Event 1-14$/m.test(text),
       "a busy calendar takes at most half the shared rows": ({ text }) => { const l = text.split("\n"); const c = l.findIndex(x => /^Calendar/.test(x)), i = l.findIndex(x => /^Inbox/.test(x)); const cal = i - c - 2, inbox = l.length - i - 2; return cal <= inbox + 1 && inbox >= 3; },
     }, note: "busy calendar" });
+    const short = { now: { schema_version: 2, updated: iso(0), items: [
+      { when: iso(1), star: false, title: "Amazon", detail: "Dispatched" },
+      { when: iso(2), star: false, title: "DHL", detail: "With courier" },
+    ] } };
+    await run("overview.js", { token: "tok", feeds: short, events: busy, family: "large", expect: {
+      "a short Inbox gives its spare rows to the calendar": ({ text }) => { const l = text.split("\n"); const c = l.findIndex(x => /^Calendar/.test(x)), i = l.findIndex(x => /^\s*Inbox/.test(x)); return i - c - 2 === 6; },
+    }, note: "busy calendar, short inbox" });
   }
   await run("overview.js", { ...widgetOpts, inApp: true, note: "preview" });
   await run("overview.js", { ...widgetOpts, inApp: true, query: { menu: "1" }, expect: {

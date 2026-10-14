@@ -8,13 +8,12 @@ const N = importModule("lib-now");
 // As in the habit widget, tapping a habit row ticks it for today and tapping the Habits header opens the menu;
 // tapping the calendar opens the Calendar app, and tapping the Inbox opens Mail.
 const CALENDAR_URL = "calshow://";   // opens the Calendar app
-const NOW_MIN_ROWS = 3;   // the calendar never leaves Inbox fewer rows than this
+const NOW_MIN_ROWS = 3;   // the calendar never leaves Inbox fewer rows than this (or than its items)
 
 function build(cal, habits, now) {
   const w = S.widget();
-  const m = S.metrics();
-  const large = m.large || !config.runsInWidget;    // the in-app preview is large
-  const { innerW } = m, availH = large ? 312 : m.availH;
+  const m = S.metrics(config.runsInWidget ? undefined : "large");   // the in-app preview is large
+  const { innerW, availH, large } = m;
   if (!large) {
     S.header(w, innerW, "Overview", null);
     S.row(w, innerW, [{ text: "Made for the large widget size" }]);
@@ -22,11 +21,13 @@ function build(cal, habits, now) {
   }
 
   // rows left once the three headers, the gaps between sections and the habit rows are paid for,
-  // shared by the calendar and Inbox: the calendar takes what it needs up to half, Inbox gets the rest
+  // shared by the calendar and Inbox
   const habitsH = H.HABITS.length * S.ROW + (H.HABITS.length - 1) * S.ROW_GAP;
   const rest = availH - 3 * S.HEAD_H - 2 * S.SECTION_GAP - habitsH;
   const shared = Math.max(2, Math.floor((rest + 2 * S.ROW_GAP) / (S.ROW + S.ROW_GAP)));   // rows in both lists together
-  const calRows = Math.max(1, Math.min(C.comingUp(cal).length, Math.ceil(shared / 2), shared - NOW_MIN_ROWS));
+  // the calendar gets what it needs up to half, plus any rows Inbox has no items for
+  const calNeed = Math.max(1, C.comingUp(cal).length), nowNeed = Math.max(1, N.items(now).length);
+  const calRows = Math.max(1, Math.min(calNeed, Math.max(Math.ceil(shared / 2), shared - nowNeed), shared - Math.min(NOW_MIN_ROWS, nowNeed)));
   const nowRows = Math.max(1, shared - calRows);
 
   // habits first; tap the header for the menu
