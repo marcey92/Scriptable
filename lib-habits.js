@@ -8,7 +8,6 @@ const LOCK_TITLE = true;  // title and rule above the Lock Screen grid
 const SHOW_EVENT = true;  // next calendar event in the header (falls back to date)
 const LOCK_H = 66;         // usable height of the rectangular Lock Screen slot
 const NAME_W = 84;        // width of the habit-name column
-const COUNT_W = 18;       // width of the count column
 
 // ---- storage: a JSON file in Scriptable's folder ----
 let fm, cloud = true;
@@ -87,11 +86,11 @@ function buildWidget(data, eventTitle) {
   return S.finish(w);
 }
 
-// one row per habit: name, a box per day (today on the right), count. Tapping a row opens
+// one row per habit: name, then a box per day running to the right edge, today last. Tapping a row opens
 // `runURL?habit=<name>`, and the script behind runURL ticks it (also used by the overview widget).
 function drawRows(w, innerW, cell, data, runURL) {
   const gap = S.BOX_GAP;
-  const count = Math.max(1, Math.floor((innerW - NAME_W - COUNT_W - gap) / (cell + gap)));
+  const count = Math.max(1, Math.floor((innerW - NAME_W) / (cell + gap)));
   const days = lastDays(count);
   const textSize = Math.max(9, Math.min(S.TEXT_SIZE, cell - 2));
 
@@ -106,15 +105,8 @@ function drawRows(w, innerW, cell, data, runURL) {
     t.font = Font.mediumSystemFont(textSize); t.textColor = S.FG;
     n.addSpacer();
 
-    let done = 0;
-    for (const d of days) {
-      const on = isDone(data, h, d); if (on) done++;
-      S.box(row, cell, on);
-    }
-
+    for (const d of days) S.box(row, cell, isDone(data, h, d));
     row.addSpacer();
-    const num = row.addText(S.p(done)); num.lineLimit = 1;
-    num.font = Font.regularMonospacedSystemFont(textSize); num.textColor = S.FG;
   });
 }
 
