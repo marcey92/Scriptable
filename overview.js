@@ -10,7 +10,7 @@ const N = importModule("lib-now");
 const CALENDAR_URL = "calshow://";   // opens the Calendar app
 const NOW_MIN_ROWS = 3;   // the calendar never leaves Inbox fewer rows than this
 
-function build(cal, habits, now, eventTitle) {
+function build(cal, habits, now) {
   const w = S.widget();
   const m = S.metrics();
   const large = m.large || !config.runsInWidget;    // the in-app preview is large
@@ -29,16 +29,16 @@ function build(cal, habits, now, eventTitle) {
   const calRows = Math.max(1, Math.min(C.comingUp(cal).length, Math.ceil(shared / 2), shared - NOW_MIN_ROWS));
   const nowRows = Math.max(1, shared - calRows);
 
-  // habits first, with the same header as the habit widget: next event today (or the date); tap for the menu
+  // habits first; tap the header for the menu
   const runURL = URLScheme.forRunningScript();
-  const head = S.header(w, innerW, "Habits", eventTitle || S.dateLabel());
+  const head = S.header(w, innerW, "Habits", S.dateLabel());   // the date: the next event is in the Calendar below
   head.url = `${runURL}?menu=1`;
   H.drawRows(w, innerW, S.ROW, habits, runURL);
 
   // calendar: tapping anywhere in it opens the Calendar app
   w.addSpacer(S.SECTION_GAP);
   const calBox = w.addStack(); calBox.layoutVertically(); calBox.url = CALENDAR_URL;
-  S.header(calBox, innerW, "Coming up", null);
+  S.header(calBox, innerW, "Calendar", null);
   C.drawComingUp(calBox, innerW, calRows, cal);
 
   // Inbox sits on the bottom edge: any height left over (a short Inbox list, or a slot taller than
@@ -69,7 +69,7 @@ if (!config.runsInWidget && tapped && H.HABITS.includes(tapped)) {
   const habits = await H.load();
   const now = await N.load(token);
   const family = config.widgetFamily;
-  const widget = family && family.startsWith("accessory") ? S.lockInline("Overview: use the large size") : build(cal, habits, now, await H.nextEvent());
+  const widget = family && family.startsWith("accessory") ? S.lockInline("Overview: use the large size") : build(cal, habits, now);
   S.refresh(widget);
   if (config.runsInWidget) Script.setWidget(widget);
   else await widget.presentLarge();     // preview when run inside the app

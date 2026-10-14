@@ -7,6 +7,7 @@ const TITLE = "Habits";
 const LOCK_TITLE = true;  // title and rule above the Lock Screen grid
 const SHOW_EVENT = true;  // next calendar event in the header (falls back to date)
 const LOCK_H = 66;         // usable height of the rectangular Lock Screen slot
+const SPARE = 10;         // room left at the right end of a habit row
 const NAME_W = 84;        // width of the habit-name column
 
 // ---- storage: a JSON file in Scriptable's folder ----
@@ -90,7 +91,10 @@ function buildWidget(data, eventTitle) {
 // `runURL?habit=<name>`, and the script behind runURL ticks it (also used by the overview widget).
 function drawRows(w, innerW, cell, data, runURL) {
   const gap = S.BOX_GAP;
-  const count = Math.max(1, Math.floor((innerW - NAME_W) / (cell + gap)));
+  // the row puts `gap` between every child, the trailing spacer included: name, boxes, spacer. SPARE
+  // keeps clear of the edge: the real slot can be a few points narrower than innerW, and an overfull
+  // row is clipped from the left, cutting into the habit names
+  const count = Math.max(1, Math.floor((innerW - NAME_W - gap - SPARE) / (cell + gap)));
   const days = lastDays(count);
   const textSize = Math.max(9, Math.min(S.TEXT_SIZE, cell - 2));
 
