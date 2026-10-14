@@ -432,6 +432,15 @@ async function run(file, opts = {}) {
       { title: "Dentist", startDate: at(1, 9), endDate: at(1, 10), isAllDay: false, cal: "Home" },
       { title: "Packing day", startDate: at(2, 0), endDate: at(3, 0), isAllDay: true, cal: "Home" },
     ];
+    const trip = [
+      { title: "Parents Canada", startDate: at(0, 0), endDate: at(5, 0), isAllDay: true, cal: "Home" },
+      { title: "Psychoanalysis", startDate: at(0, 23), endDate: at(1, 0), isAllDay: false, cal: "Home" },
+      { title: "TT", startDate: at(3, 12), endDate: at(3, 13), isAllDay: false, cal: "Home" },
+    ];
+    await run("overview.js", { ...widgetOpts, events: trip, family: "large", expect: {
+      "a multi-day all-day event shows once, on its first day": ({ text }) => (text.match(/Parents Canada/g) || []).length === 1,
+      "days with only that repeat are skipped, so the next real event shows": ({ text }) => /^12:00\s+TT$/m.test(text) && !/^\s*Tomorrow/m.test(text),
+    }, note: "multi-day all-day" });
     await run("overview.js", { ...widgetOpts, events: withAllDay, family: "large", expect: {
       "all-day events go in the day's heading, before the date": ({ text }) => /^\s*Tomorrow\s+Bank holiday · \d\d\.\d\d$/m.test(text),
       "and not as a row": ({ text }) => !/^\S+\s+Bank holiday$/m.test(text),

@@ -87,6 +87,23 @@ function buildWidget(result, label) {
 const PAIR_MAX = 11;   // two events share a line when both titles are at most this many characters
 const ALLDAY_MAX = 22; // all-day titles in a heading are cut to this many characters
 
+// the days as the overview shows them: an all-day event spanning several days appears only on the
+// first day it's listed; a day left with nothing new (only such repeats) is dropped
+function overviewDays(result) {
+  const seen = new Set(), out = [];
+  for (const d of result.days || []) {
+    const events = d.events.filter(e => {
+      if (!e.isAllDay) return true;
+      const key = `${e.title}|${e.startDate.getTime()}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    if (events.length) out.push({ ...d, events });
+  }
+  return out;
+}
+
 // right side of a day's heading: its all-day events, then the date ("Bank holiday · 18.10")
 function dayRight(day) {
   const all = day.events.filter(e => e.isAllDay).map(e => e.title).join(", ");
@@ -97,7 +114,7 @@ function dayRight(day) {
 // lines under the first heading: each later day's heading, then its timed events, two short ones per line
 function upcomingLines(result) {
   const out = [];
-  (result.days || []).forEach((d, i) => {
+  overviewDays(result).forEach((d, i) => {
     if (i > 0) out.push({ day: d });
     const timed = d.events.filter(e => !e.isAllDay);
     for (let j = 0; j < timed.length; j++) {
@@ -131,14 +148,14 @@ function fitLines(result, maxH) {
 
 // the first day's heading text: { title, right }
 function firstHeading(result) {
-  const first = (result.days || [])[0];
+  const first = overviewDays(result)[0];
   return first ? { title: dayTitle(first.offset, first.date, ""), right: dayRight(first) } : { title: "Today", right: S.dayMonth() };
 }
 
 // upcoming events in `maxH` points under the first day's heading (drawn by the caller)
 function drawUpcoming(w, innerW, maxH, result) {
   const lines = fitLines(result, maxH).lines;
-  const firstTimed = ((result.days || [])[0] || { events: [] }).events.some(e => !e.isAllDay);
+  const firstTimed = (overviewDays(result)[0] || { events: [] }).events.some(e => !e.isAllDay);
   if (result.error || !(result.days || []).length) {
     S.row(w, innerW, [{ text: result.error || "Nothing this week" }]);
     return;
