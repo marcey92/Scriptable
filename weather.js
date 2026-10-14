@@ -6,7 +6,7 @@ const STEP = 3;             // hours between rows
 const UNITS = "celsius";    // or "fahrenheit"
 const TEMP_W = 34;
 const RAIN_W = 40;
-const WIND_W = 62;          // wind column, e.g. "14 mph", or "14–35 mph" when gusty
+const WIND_W = 76;          // wind column, e.g. "14 mph", or "14–35 mph" when gusty (room for two-digit gusts)
 const GUST_FROM = 25;       // gusts are shown from this many mph up...
 const GUST_OVER = 10;       // ...and only when this much stronger than the average wind
 const UV_FROM = 3;          // UV is shown in the header from this level up (3 = moderate: worth sun cream)
