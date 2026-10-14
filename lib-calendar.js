@@ -11,7 +11,7 @@ function dayTitle(offset, d, label) {
 
 // ---- calendar ----
 // returns { days: [{ offset, date, events }] }, or { error } when something is missing
-async function loadDays(names) {
+async function loadDays(names, allDay = SHOW_ALL_DAY) {
   try {
     let cals = [];
     if (names.length) {
@@ -27,7 +27,7 @@ async function loadDays(names) {
     for (let i = 0; i < LOOK_AHEAD; i++) {
       const s = S.dayStart(i), e = S.dayStart(i + 1);
       const list = evs.filter(ev => {
-        if (ev.isAllDay) return SHOW_ALL_DAY && ev.startDate < e && ev.endDate > s;   // every day it covers
+        if (ev.isAllDay) return allDay && ev.startDate < e && ev.endDate > s;         // every day it covers
         if (i === 0 && ev.endDate <= now) return false;                               // already finished
         if (ev.startDate >= s && ev.startDate < e) return true;                       // starts this day
         return i === 0 && ev.startDate < s && ev.endDate > now;                       // still running from earlier
@@ -83,31 +83,82 @@ function buildWidget(result, label) {
   return S.finish(w);
 }
 
-// the overview's Calendar: one list of events under a single heading, each row with a day column
-// (the weekday on each day's first event, today included; blank for the rest) and a time column
-// ("—" for all day)
-const DAY_W = 32;
-function comingUp(result) {
-  const rows = [];
-  for (const d of result.days || []) {
-    d.events.forEach((e, i) => rows.push({
-      day: i > 0 ? "" : S.WD[d.date.getDay()].slice(0, 3).toUpperCase(),
-      time: e.isAllDay ? "—" : S.timeLabel(e.startDate),
-      title: e.title,
-    }));
-  }
-  return rows;
+// ---- the overview's calendar: a heading per day, all-day events in the heading ----
+const PAIR_MAX = 11;   // two events share a line when both titles are at most this many characters
+const ALLDAY_MAX = 22; // all-day titles in a heading are cut to this many characters
+
+// right side of a day's heading: its all-day events, then the date ("Bank holiday · 18.10")
+function dayRight(day) {
+  const all = day.events.filter(e => e.isAllDay).map(e => e.title).join(", ");
+  const cut = all.length > ALLDAY_MAX ? all.slice(0, ALLDAY_MAX - 1) + "…" : all;
+  return cut ? `${cut} · ${S.dayMonth(day.date)}` : S.dayMonth(day.date);
 }
-function drawComingUp(w, innerW, rows, result) {
-  const list = comingUp(result);
-  if (result.error || !list.length) {
+
+// lines under the first heading: each later day's heading, then its timed events, two short ones per line
+function upcomingLines(result) {
+  const out = [];
+  (result.days || []).forEach((d, i) => {
+    if (i > 0) out.push({ day: d });
+    const timed = d.events.filter(e => !e.isAllDay);
+    for (let j = 0; j < timed.length; j++) {
+      const a = timed[j], b = timed[j + 1];
+      if (b && a.title.length <= PAIR_MAX && b.title.length <= PAIR_MAX) { out.push({ events: [a, b] }); j++; }
+      else out.push({ events: [a] });
+    }
+  });
+  return out;
+}
+
+// height of each kind of line: an event row, and a later day's heading (a section gap, then a header)
+const EVENT_H = S.ROW, DAY_H = S.SECTION_GAP + S.HEAD_H;
+
+// the lines that fit in `maxH` points, never ending on a heading with nothing under it. { lines, height }
+function fitLines(result, maxH) {
+  const lines = [];
+  let h = 0;
+  for (const l of upcomingLines(result)) {
+    const prev = lines[lines.length - 1];
+    const cost = l.day ? DAY_H : EVENT_H + (prev && !prev.day ? S.ROW_GAP : 0);
+    if (h + cost > maxH) break;
+    lines.push(l); h += cost;
+  }
+  // a heading needs something under it, unless the day has only all-day events (they're in the heading)
+  while (lines.length && lines[lines.length - 1].day && lines[lines.length - 1].day.events.some(e => !e.isAllDay)) {
+    lines.pop(); h -= DAY_H;
+  }
+  return { lines, height: Math.max(h, EVENT_H) };
+}
+
+// the first day's heading text: { title, right }
+function firstHeading(result) {
+  const first = (result.days || [])[0];
+  return first ? { title: dayTitle(first.offset, first.date, ""), right: dayRight(first) } : { title: "Today", right: S.dayMonth() };
+}
+
+// upcoming events in `maxH` points under the first day's heading (drawn by the caller)
+function drawUpcoming(w, innerW, maxH, result) {
+  const lines = fitLines(result, maxH).lines;
+  const firstTimed = ((result.days || [])[0] || { events: [] }).events.some(e => !e.isAllDay);
+  if (result.error || !(result.days || []).length) {
     S.row(w, innerW, [{ text: result.error || "Nothing this week" }]);
     return;
   }
-  list.slice(0, rows).forEach((r, i) => {
-    if (i > 0) w.addSpacer(S.ROW_GAP);
-    S.row(w, innerW, [{ text: r.day, w: DAY_W, mono: true }, { text: r.time, w: S.TIME_W, mono: true }, { text: r.title }]);
+  const half = Math.floor(innerW / 2);
+  const cells = e => [{ text: S.timeLabel(e.startDate), w: S.TIME_W, mono: true }, { text: e.title }];
+  lines.forEach((l, i) => {
+    if (l.day) {
+      w.addSpacer(S.SECTION_GAP);
+      S.header(w, innerW, dayTitle(l.day.offset, l.day.date, ""), dayRight(l.day));
+      return;
+    }
+    if (i > 0 && !lines[i - 1].day) w.addSpacer(S.ROW_GAP);
+    if (l.events.length === 2) {
+      const [a, b] = l.events;
+      S.row(w, innerW, [{ text: S.timeLabel(a.startDate), w: S.TIME_W, mono: true }, { text: a.title, w: half - S.TIME_W },
+        { text: S.timeLabel(b.startDate), w: S.TIME_W, mono: true }, { text: b.title }]);
+    } else S.row(w, innerW, cells(l.events[0]));
   });
+  if (!firstTimed && !lines.length) S.row(w, innerW, [{ text: "Nothing else today" }]);
 }
 
 // ---- events Hermes pushes to /widget/api/calendar ----
@@ -214,4 +265,4 @@ function buildLockRect(result) {
   return w;
 }
 
-module.exports = { syncFromFeed, lastSyncFailure, loadDays, dayTitle, comingUp, drawComingUp, buildWidget, buildLockRect, lockLines };
+module.exports = { syncFromFeed, lastSyncFailure, loadDays, dayTitle, fitLines, firstHeading, drawUpcoming, buildWidget, buildLockRect, lockLines };
