@@ -83,14 +83,15 @@ function buildWidget(result, label) {
   return S.finish(w);
 }
 
-// "Coming up" in the overview: one list of events under a single heading, each row with a day column
-// (the weekday on a day's first event only; blank for today) and a time column ("—" for all day)
+// the overview's Calendar: one list of events under a single heading, each row with a day column
+// (the weekday on each day's first event, today included; blank for the rest) and a time column
+// ("—" for all day)
 const DAY_W = 32;
 function comingUp(result) {
   const rows = [];
   for (const d of result.days || []) {
     d.events.forEach((e, i) => rows.push({
-      day: d.offset === 0 || i > 0 ? "" : S.WD[d.date.getDay()].slice(0, 3),
+      day: i > 0 ? "" : S.WD[d.date.getDay()].slice(0, 3),
       time: e.isAllDay ? "—" : S.timeLabel(e.startDate),
       title: e.title,
     }));
