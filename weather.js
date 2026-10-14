@@ -6,7 +6,9 @@ const STEP = 3;             // hours between rows
 const UNITS = "celsius";    // or "fahrenheit"
 const TEMP_W = 34;
 const RAIN_W = 40;
-const WIND_W = 48;          // wind column, e.g. "14 mph"
+const WIND_W = 62;          // wind column, e.g. "14 mph", or "14–35 mph" when gusty
+const GUST_FROM = 25;       // gusts are shown from this many mph up...
+const GUST_OVER = 10;       // ...and only when this much stronger than the average wind
 const UV_FROM = 3;          // UV is shown in the header from this level up (3 = moderate: worth sun cream)
 const TAP_URL = "weather://";   // tapping the widget opens Apple's Weather app
 
@@ -47,7 +49,7 @@ async function findPlace(cache) {
 async function fetchHours(place) {
   const url = "https://api.open-meteo.com/v1/forecast"
     + `?latitude=${place.lat}&longitude=${place.lon}`
-    + "&hourly=temperature_2m,precipitation_probability,weather_code,wind_speed_10m,uv_index"
+    + "&hourly=temperature_2m,precipitation_probability,weather_code,wind_speed_10m,wind_gusts_10m,uv_index"
     + `&temperature_unit=${UNITS}&wind_speed_unit=mph&timeformat=unixtime&timezone=auto&forecast_days=3`;
   const json = await new Request(url).loadJSON();
   const h = json.hourly;
@@ -57,6 +59,7 @@ async function fetchHours(place) {
     rain: h.precipitation_probability ? h.precipitation_probability[i] : null,
     code: h.weather_code[i],
     wind: h.wind_speed_10m ? h.wind_speed_10m[i] : null,
+    gust: h.wind_gusts_10m ? h.wind_gusts_10m[i] : null,
     uv: h.uv_index ? h.uv_index[i] : null,
   }));
 }
@@ -92,7 +95,12 @@ function words(code) {
   return "";
 }
 const deg = v => (v === null || v === undefined ? "–" : `${Math.round(v)}°`);
-const mph = v => (v === null || v === undefined ? "" : `${Math.round(v)} mph`);
+// "14 mph", or "14–35 mph" when the gusts are strong and well above the average
+function mph(wind, gust) {
+  if (wind === null || wind === undefined) return "";
+  const w = Math.round(wind), g = Math.round(gust || 0);
+  return g >= GUST_FROM && g - w >= GUST_OVER ? `${w}–${g} mph` : `${w} mph`;
+}
 const pct = v => (v === null || v === undefined ? "" : `${Math.round(v)}%`);
 
 // the current hour, then every STEP hours, up to `max` rows
@@ -138,7 +146,7 @@ function buildWidget(data) {
       { text: r.label, w: S.TIME_W, mono: true },
       { text: deg(r.temp), w: TEMP_W, mono: true },
       { text: small ? "" : words(r.code) },
-      ...(small ? [] : [{ text: mph(r.wind), w: WIND_W, mono: true, right: true }]),
+      ...(small ? [] : [{ text: mph(r.wind, r.gust), w: WIND_W, mono: true, right: true }]),
       { text: pct(r.rain), w: RAIN_W, mono: true, right: true },
     ]);
   });
