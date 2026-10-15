@@ -6,7 +6,7 @@ const N = importModule("lib-now");
 // Overview, set like a timetable on a 15 pt grid (see "the grid" in swiss.js):
 //   Thu 15.10   S S M T W T F S S M T W T        <- ruler: the date, then each day's initial
 //   Anki        ■ ■ □ ■ ...                 11   <- one row per habit, 13 days, count
-//   Calendar    ━━━━━━━━━━━━━━━━━━━━ +2 later    <- section row: label, 2 pt rule, status
+//   Calendar    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━    <- section row: label and a 2 pt rule
 //   THU  14:00  Psychoanalysis                   <- day | time | what; a 1 pt rule starts each later day
 //   Inbox       ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //   WED  11:12  ★ Homes & Villas  €900 claim...  <- day | time | sender | detail, at most INBOX_MAX
@@ -31,13 +31,12 @@ function build(cal, habits, now) {
   const calRows = C.timetableRows(cal);
   const inN = Math.max(1, Math.min(INBOX_MAX, N.items(now).length));
   const calN = Math.max(1, Math.min(calRows.length || 1, shared - inN));
-  const more = calRows.length - calN;
 
   const runURL = URLScheme.forRunningScript();
   H.drawGrid(w, g.W, habits, runURL);
 
   const calBox = w.addStack(); calBox.layoutVertically(); calBox.url = CALENDAR_URL;
-  S.gSection(calBox, g.W, "Calendar", more > 0 ? `+${more} later` : null);
+  S.gSection(calBox, g.W, "Calendar", null);
   C.drawTimetable(calBox, g.W, calRows, calN);
 
   const inBox = w.addStack(); inBox.layoutVertically(); inBox.url = N.MAIL_URL;
