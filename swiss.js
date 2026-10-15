@@ -103,11 +103,17 @@ S.gRow = (parent, W, cells, h = S.M) => {
   for (const c of cells) S.gCell(row, c.w ? c : { ...c, w: W - fixed }, h);
   return row;
 };
-// a section row: the label hangs in the key column, a 2 pt rule runs to the right edge, an optional
-// status sits at the end of the rule ("+3 later", "Stale since 14:02")
+// a section row, like a station sign: the label reversed out of a white block in the key column (navy
+// text on white), then a 2 pt rule to the right edge, with an optional status at its end
+// ("Stale since 14:02")
+const SIGN_GAP = 6;   // between the white block and the rule
 S.gSection = (parent, W, label, status) => {
   const row = parent.addStack(); row.size = new Size(W, S.M); row.centerAlignContent(); row.spacing = 0;
-  S.gCell(row, { text: label, w: S.G.KEY, font: S.F.key }, S.M);
+  const sign = row.addStack(); sign.size = new Size(S.G.KEY - SIGN_GAP, S.M - 1); sign.centerAlignContent();
+  sign.backgroundColor = S.FG; sign.setPadding(0, 4, 0, 0);
+  const t = sign.addText(label); t.lineLimit = 1; t.font = S.F.key; t.textColor = S.BG;
+  sign.addSpacer();
+  row.addSpacer(SIGN_GAP);
   const statusW = status ? 111 : 0;
   const rule = row.addStack(); rule.size = new Size(W - S.G.KEY - statusW, 2); rule.backgroundColor = S.FG;
   if (status) { row.addSpacer(6); S.gCell(row, { text: status, w: 105, font: S.F.key, right: true }, S.M); }
