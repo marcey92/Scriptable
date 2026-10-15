@@ -94,7 +94,7 @@ async function runInner(file, opts) {
     Rect: class { constructor(x, y, w, h) { this.x = x; this.y = y; this.width = w; this.height = h; } },
     DrawContext: class {
       constructor() { this.drawn = []; this.font = null; }
-      setTextAlignedCenter() {} setTextColor() {} setFont(f) { this.font = f; }
+      setTextAlignedCenter() {} setTextAlignedRight() {} setTextColor() {} setFont(f) { this.font = f; }
       drawTextInRect(t, r) {
         if (r.x < 0 || r.x + r.width > this.size.width) throw new Error(`text at ${r.x} is outside the ${this.size.width} pt picture`);
         this.drawn.push(t); (this.rects = this.rects || []).push(r);
@@ -414,9 +414,9 @@ async function runInner(file, opts) {
   savedEvents.length = 0;   // the tests below expect only the stand-in calendar
   for (const family of ["large", "medium", "accessoryInline"]) await run("overview.js", { ...widgetOpts, family });
   await run("overview.js", { ...widgetOpts, family: "large", expect: {
-    "ruler first: the date, then 12 day initials, each placed over its box": ({ text, widget }) => {
+    "ruler first: the date, then 13 day initials, each placed over its box": ({ text, widget }) => {
       const img = widget.children[0].children.find(c => c.image);
-      return /^[A-Z][a-z]{2} \d\d\.\d\d\s+([A-Z] ){11}[A-Z]\s*$/.test(text.split("\n")[0]) && img.image.rects.every((r, i) => r.x === i * 15 && r.width === 12);
+      return /^[A-Z][a-z]{2} \d\d\.\d\d\s+([A-Z] ){12}[A-Z]\s*$/.test(text.split("\n")[0]) && img.image.rects.every((r, i) => r.x === i * 15 && r.width === 12);
     },
     "then the Calendar and Inbox section rows, in that order": ({ text }) => { const l = text.split("\n"); const c = l.findIndex(x => /^\s*Calendar\s+■/.test(x)), i = l.findIndex(x => /^\s*Inbox\s+■/.test(x)); return c === 5 && c < i; },
     "calendar rows are day | time | what, the day on each day's first row": ({ text }) => /^[A-Z]{3}\s+14:00\s+Psychoanalysis \| Mayessi Svoronou$/m.test(text),
@@ -427,7 +427,7 @@ async function runInner(file, opts) {
     "habit rows are drawn": ({ text }) => /^Anki/m.test(text) && /^Gratitude/m.test(text),
     "calendar rows are drawn": ({ text }) => text.includes("Late dinner"),
     "now rows are drawn": ({ text }) => text.includes("★ Parcel"),
-    "habit rows: name, 12 boxes, count without a leading zero": ({ text }) => /^Anki(\s+[□■]){12}\s+[1-9]\d?$/m.test(text) || /^Anki(\s+[□■]){12}\s+0$/m.test(text),
+    "habit rows: name, 13 boxes, count without a leading zero": ({ text }) => /^Anki(\s+[□■]){13}\s+([1-9]\d?|0)$/m.test(text),
   }, note: "contents" });
   await run("overview.js", { ...widgetOpts, family: "large", events: [], expect: {
     "tapping the calendar opens Calendar, tapping the Inbox opens Mail": ({ widget }) => {
