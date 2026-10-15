@@ -60,16 +60,17 @@ S.metrics = (as) => {
 
 // ---- the grid: the overview's timetable layout ----
 // One 15 pt module across and down: text rows and habit boxes (12 pt + 3 pt gap) sit on the same lattice.
-// Columns hang from fixed edges: D (day key) 0, T (time) 36, W (what) 90; Inbox splits W at 186.
-// (Measured on the phone: "WED" in semibold needs more than 30 pt and "–22.10" more than 45 pt.)
+// Columns hang from fixed edges: D (day key) 0, T (time) 40, W (what) 90; Inbox splits W at 186.
+// (Measured on the phone: "22.10" in semibold needs more than 36 pt and "–22.10" more than 45 pt.)
 // One text size (11); hierarchy comes from weight and rules, never from grey.
 S.M = 15;
 S.G_PAD = [16, 14, 14, 15];   // top, left, bottom, right: a mini's large widget leaves 300 x 315 pt
-S.G = { D: 36, T: 54, KEY: 90, W1: 96 };   // KEY = D + T: habit names and section labels hang in it
+S.G = { D: 40, T: 50, KEY: 90, W1: 96 };   // KEY = D + T: habit names and section labels hang in it
 S.F = {
   text: Font.systemFont(11),
   key: Font.semiboldSystemFont(11),
   mono: Font.regularMonospacedSystemFont(11),
+  monoKey: Font.boldMonospacedSystemFont(11),
 };
 // Home Screen widget widths (medium and large) per screen size; unknown screens get the narrowest
 S.WIDGET_W = {
