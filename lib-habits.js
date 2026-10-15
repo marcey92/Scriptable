@@ -61,15 +61,18 @@ async function nextEvent() {
 }
 
 // ---- tick-off menu (tap the header, or run the script in the app) ----
-async function menu(data) {
+// `extras`: further lines under the habits, [{ label, run }] (the overview adds "Calendars…")
+async function menu(data, extras = []) {
   const today = habitNow();
   while (true) {
     const a = new Alert();
     a.title = "Today's habits";
     for (const h of HABITS) a.addAction((isDone(data, h, today) ? "✓ " : "") + h);
+    for (const x of extras) a.addAction(x.label);
     a.addCancelAction("Done");
     const i = await a.presentSheet();
     if (i === -1) break;
+    if (i >= HABITS.length) { await extras[i - HABITS.length].run(); continue; }
     toggle(data, HABITS[i]);
   }
 }

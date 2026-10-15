@@ -11,7 +11,8 @@ const N = importModule("lib-now");
 //   Inbox       ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //   WED  11:12  ★ Homes & Villas  €900 claim...  <- day | time | sender | detail, at most INBOX_MAX
 // Each part is drawn by the same libraries as its own widget (lib-habits, lib-calendar, lib-now).
-// Tapping a habit row ticks it for today, tapping the ruler opens the habit menu, tapping the calendar
+// Tapping a habit row ticks it for today, tapping the ruler opens the habit menu (with "Calendars…" to
+// choose which calendars to show), tapping the calendar
 // opens Calendar and tapping the Inbox opens Mail.
 const CALENDAR_URL = "calshow://";
 const LOOK_AHEAD = 14;  // days of calendar: beyond a week, days are named by date
@@ -54,19 +55,12 @@ if (!config.runsInWidget && tapped && H.HABITS.includes(tapped)) {
   H.toggle(await H.load(), tapped);     // one-tap from a habit row
   try { App.close(); } catch (e) {}     // drop back to the Home Screen
 } else if (!config.runsInWidget && query.menu) {
-  await H.menu(await H.load());         // tapped the Habits header: the tick-off menu
+  // tapped the date row: tick habits, or choose which calendars the overview shows
+  await H.menu(await H.load(), [{ label: "Calendars…", run: C.chooseCalendars }]);
 } else {
   // the first run in the app asks for calendar access and, if missing, the feed's read token
   const token = await N.token();
   await C.syncFromFeed(token);         // add any events Hermes pushed before reading the calendar
-  // run inside the app (not from a widget tap): preview, or choose which calendars to show
-  if (!config.runsInWidget) {
-    const a = new Alert();
-    a.addAction("Preview widget");
-    a.addAction("Calendars…");
-    a.addCancelAction("Cancel");
-    if ((await a.presentSheet()) === 1) await C.chooseCalendars();
-  }
   const cal = await C.loadDays([], true, LOOK_AHEAD, C.hiddenCalendars());
   const habits = await H.load();
   const now = await N.load(token);
