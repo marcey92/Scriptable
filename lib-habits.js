@@ -131,7 +131,7 @@ function drawRows(w, innerW, cell, data, runURL) {
 // A ruler row (the date in the key column, then each day's initial over its column, today in semibold;
 // tapping it opens the menu), then one row per habit: name | a box per day | count of the days shown.
 // Each day is one 15 pt slot: a 12 pt box (or the initial) at its left, then the 3 pt gap.
-const GRID_DAYS = 12, GRID_BOX = 12;
+const GRID_DAYS = 13, GRID_BOX = 12;
 function drawGrid(w, W, data, runURL) {
   const days = lastDays(GRID_DAYS);
   const countW = W - S.G.KEY - GRID_DAYS * S.M;
@@ -164,7 +164,13 @@ function drawGrid(w, W, data, runURL) {
       S.box(row, GRID_BOX, on);
       row.addSpacer(S.M - GRID_BOX);
     }
-    S.gCell(row, { text: String(done), w: countW, font: S.F.mono, right: true }, S.M);
+    // the count is drawn, right-aligned, like the initials: on a mini its slot is only 15 pt wide,
+    // and text in a cell that narrow gets clipped
+    const ctx = new DrawContext();
+    ctx.size = new Size(countW, S.M); ctx.opaque = false; ctx.respectScreenScale = true;
+    ctx.setTextAlignedRight(); ctx.setTextColor(S.FG); ctx.setFont(S.F.mono);
+    ctx.drawTextInRect(String(done), new Rect(0, 1, countW, S.M - 1));
+    const num = row.addImage(ctx.getImage()); num.imageSize = new Size(countW, S.M);
   }
 }
 
