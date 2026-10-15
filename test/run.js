@@ -418,10 +418,10 @@ async function runInner(file, opts) {
       const img = widget.children[0].children.find(c => c.image);
       return /^[A-Z][a-z]{2} \d\d\.\d\d\s+([A-Z] ){12}[A-Z]\s*$/.test(text.split("\n")[0]) && img.image.rects.every((r, i) => r.x === i * 15 && r.width === 12);
     },
-    "section labels are reversed out of white blocks": ({ widget }) => {
+    "the date, Calendar and Inbox are reversed out of white blocks": ({ widget }) => {
       const signs = []; const walk = n => { if (n.children) { if (n.backgroundColor && n.backgroundColor.hex === "#FFFFFF" && n.size && n.size.width === 84) signs.push(n); n.children.forEach(walk); } };
       walk(widget);
-      return signs.length === 2 && signs.every(x => x.children[0].textColor.hex === "#0F1F47");
+      return signs.length === 3 && signs.every(x => x.children[0].textColor.hex === "#0F1F47") && /^[A-Z][a-z]{2} \d\d\.\d\d$/.test(signs[0].children[0].text);
     },
     "then the Calendar and Inbox section rows, in that order": ({ text }) => { const l = text.split("\n"); const c = l.findIndex(x => /^\s*Calendar\s+■/.test(x)), i = l.findIndex(x => /^\s*Inbox\s+■/.test(x)); return c === 5 && c < i; },
     "calendar rows are day | time | what, the day on each day's first row": ({ text }) => /^[A-Z]{3}\s+14:00\s+Psychoanalysis \| Mayessi Svoronou$/m.test(text),
