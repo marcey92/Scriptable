@@ -58,6 +58,67 @@ S.metrics = (as) => {
   return { family, large, small, lock, innerW, availH };
 };
 
+// ---- the grid: the overview's timetable layout ----
+// One 15 pt module across and down: text rows and habit boxes (12 pt + 3 pt gap) sit on the same lattice.
+// Columns hang from fixed edges: D (day key) 0, T (time) 30, W (what) 75; Inbox splits W at 180.
+// One text size (11); hierarchy comes from weight and rules, never from grey.
+S.M = 15;
+S.G_PAD = [16, 14, 14, 15];   // top, left, bottom, right: a mini's large widget leaves 300 x 315 pt
+S.G = { D: 30, T: 45, KEY: 75, W1: 105 };
+S.F = {
+  text: Font.systemFont(11),
+  key: Font.semiboldSystemFont(11),
+  mono: Font.regularMonospacedSystemFont(11),
+};
+// Home Screen widget widths (medium and large) per screen size; unknown screens get the narrowest
+S.WIDGET_W = {
+  "430x932": 364, "428x926": 364, "414x896": 360, "414x736": 348, "402x874": 338, "393x852": 338,
+  "390x844": 338, "375x812": 329, "360x780": 329, "375x667": 321, "320x568": 292,
+};
+// the grid for a slot: W = content width, H = content height, rows = whole 15 pt rows that fit
+S.grid = (as) => {
+  const s = Device.screenSize(), k = `${Math.min(s.width, s.height)}x${Math.max(s.width, s.height)}`;
+  const family = as || config.widgetFamily || "medium";
+  const large = family === "large" || family === "extraLarge";
+  const [h, hLarge] = S.WIDGET_H[k] || [141, 311];
+  const W = (S.WIDGET_W[k] || 292) - S.G_PAD[1] - S.G_PAD[3];
+  const H = (large ? hLarge : h) - S.G_PAD[0] - S.G_PAD[2];
+  return { large, W, H, rows: Math.floor(H / S.M) };
+};
+// a fixed-size cell: { text, w, font, right }; text is cut with "…", never shrunk
+S.gCell = (row, c, h) => {
+  const col = row.addStack(); col.size = new Size(c.w, h); col.centerAlignContent();
+  if (c.right) col.addSpacer();
+  const t = col.addText(String(c.text || "")); t.lineLimit = 1;
+  t.font = c.font || S.F.text; t.textColor = S.FG;
+  if (!c.right) col.addSpacer();
+  return col;
+};
+// a row of cells, W wide and one module (or `h`) tall; the last cell may leave out w to take the rest
+S.gRow = (parent, W, cells, h = S.M) => {
+  const row = parent.addStack(); row.size = new Size(W, h); row.centerAlignContent(); row.spacing = 0;
+  const fixed = cells.reduce((n, c) => n + (c.w || 0), 0);
+  for (const c of cells) S.gCell(row, c.w ? c : { ...c, w: W - fixed }, h);
+  return row;
+};
+// a row that starts a new day: a 1 pt rule inside the top of the row, so it costs no height
+S.gDayRow = (parent, W, cells) => {
+  const box = parent.addStack(); box.layoutVertically(); box.size = new Size(W, S.M);
+  const rule = box.addStack(); rule.size = new Size(W, 1); rule.backgroundColor = S.FG;
+  S.gRow(box, W, cells, S.M - 1);
+  return box;
+};
+// a section row: the label hangs in the key column, a 2 pt rule runs to the right edge, an optional
+// status sits at the end of the rule ("+3 later", "Stale since 14:02")
+S.gSection = (parent, W, label, status) => {
+  const row = parent.addStack(); row.size = new Size(W, S.M); row.centerAlignContent(); row.spacing = 0;
+  S.gCell(row, { text: label, w: S.G.KEY, font: S.F.key }, S.M);
+  const statusW = status ? 111 : 0;
+  const rule = row.addStack(); rule.size = new Size(W - S.G.KEY - statusW, 2); rule.backgroundColor = S.FG;
+  if (status) { row.addSpacer(6); S.gCell(row, { text: status, w: 105, font: S.F.key, right: true }, S.M); }
+  return row;
+};
+
 // how many text rows fit under `sections` headers
 S.rowsFor = (availH, sections = 1) =>
   Math.max(sections, Math.floor(

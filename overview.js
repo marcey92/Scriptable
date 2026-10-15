@@ -3,55 +3,47 @@ const C = importModule("lib-calendar");
 const H = importModule("lib-habits");
 const N = importModule("lib-now");
 
-// Overview: habits, calendar and "Inbox" in one large widget, stacked under their own headers.
-// Each part is drawn by the same code as its own widget (lib-calendar, lib-habits, lib-now).
-// As in the habit widget, tapping a habit row ticks it for today and tapping the Habits header opens the menu;
-// tapping the calendar opens the Calendar app, and tapping the Inbox opens Mail.
-const CALENDAR_URL = "calshow://";   // opens the Calendar app
-const NOW_MIN_ROWS = 3;   // the calendar never leaves Inbox fewer rows than this (or than its items)
+// Overview, set like a timetable on a 15 pt grid (see "the grid" in swiss.js):
+//   Thu 15.10   S S M T W T F S S M T W T        <- ruler: the date, then each day's initial
+//   Anki        ■ ■ □ ■ ...                 11   <- one row per habit, 13 days, count
+//   Calendar    ━━━━━━━━━━━━━━━━━━━━ +2 later    <- section row: label, 2 pt rule, status
+//   THU  14:00  Psychoanalysis                   <- day | time | what; a 1 pt rule starts each later day
+//   Inbox       ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//   WED  11:12  ★ Homes & Villas  €900 claim...  <- day | time | sender | detail, at most INBOX_MAX
+// Each part is drawn by the same libraries as its own widget (lib-habits, lib-calendar, lib-now).
+// Tapping a habit row ticks it for today, tapping the ruler opens the habit menu, tapping the calendar
+// opens Calendar and tapping the Inbox opens Mail.
+const CALENDAR_URL = "calshow://";
+const INBOX_MAX = 5;   // the Inbox never shows more than this many items; the calendar gets the rest
 
 function build(cal, habits, now) {
   const w = S.widget();
-  const m = S.metrics(config.runsInWidget ? undefined : "large");   // the in-app preview is large
-  const { innerW, availH, large } = m;
-  if (!large) {
-    S.header(w, innerW, "Overview", null);
-    S.row(w, innerW, [{ text: "Made for the large widget size" }]);
+  w.setPadding(...S.G_PAD);
+  const g = S.grid(config.runsInWidget ? undefined : "large");   // the in-app preview is large
+  if (!g.large) {
+    S.gRow(w, g.W, [{ text: "Overview", w: S.G.KEY, font: S.F.key }, { text: "Made for the large widget size" }]);
     return S.finish(w);
   }
 
-  // height left once the three headers, the gaps between sections and the habit rows are paid for,
-  // shared by the calendar and Inbox: the calendar takes what it needs up to half, plus whatever Inbox
-  // has no items for; Inbox keeps at least NOW_MIN_ROWS (or as many as it has items)
-  const rowsH = k => k * S.ROW + Math.max(0, k - 1) * S.ROW_GAP;
-  const rest = availH - 3 * S.HEAD_H - 2 * S.SECTION_GAP - rowsH(H.HABITS.length);
-  const nowNeed = Math.max(1, N.items(now).length);
-  const cap = Math.min(Math.max(Math.ceil(rest / 2), rest - rowsH(nowNeed)), rest - rowsH(Math.min(NOW_MIN_ROWS, nowNeed)));
-  const calH = C.fitLines(cal, Math.max(S.ROW, cap)).height;
-  const nowRows = Math.max(1, Math.floor((rest - calH + S.ROW_GAP) / (S.ROW + S.ROW_GAP)));
+  // rows: 5 for the habit band, 1 for each section row, the rest shared by the calendar and Inbox
+  const shared = g.rows - (1 + H.HABITS.length) - 2;
+  const calRows = C.timetableRows(cal);
+  const inN = Math.max(1, Math.min(INBOX_MAX, N.items(now).length));
+  const calN = Math.max(1, Math.min(calRows.length || 1, shared - inN));
+  const more = calRows.length - calN;
 
-  // habits first; tap the header for the menu
   const runURL = URLScheme.forRunningScript();
-  const head = S.header(w, innerW, "Habits", S.dateLabel());   // the date: the next event is in the Calendar below
-  head.url = `${runURL}?menu=1`;
-  H.drawRows(w, innerW, S.ROW, habits, runURL);
+  H.drawGrid(w, g.W, habits, runURL);
 
-  // calendar: tapping anywhere in it opens the Calendar app
-  w.addSpacer(S.SECTION_GAP);
   const calBox = w.addStack(); calBox.layoutVertically(); calBox.url = CALENDAR_URL;
-  const head1 = C.firstHeading(cal);
-  S.header(calBox, innerW, head1.title, head1.right);
-  C.drawUpcoming(calBox, innerW, calH, cal);
+  S.gSection(calBox, g.W, "Calendar", more > 0 ? `+${more} later` : null);
+  C.drawTimetable(calBox, g.W, calRows, calN);
 
-  // Inbox sits on the bottom edge: any height left over (a short Inbox list, or a slot taller than
-  // planned) becomes space above it, never a gap at the bottom
-  // and tapping the Inbox opens Mail
-  w.addSpacer(S.SECTION_GAP);
-  w.addSpacer();
   const inBox = w.addStack(); inBox.layoutVertically(); inBox.url = N.MAIL_URL;
-  S.header(inBox, innerW, N.TITLE, N.headRight(now));
-  N.drawRows(inBox, innerW, nowRows, now);
+  S.gSection(inBox, g.W, N.TITLE, N.isStale(now) ? N.headRight(now) : null);
+  N.drawTimetable(inBox, g.W, now, inN);
 
+  w.addSpacer();   // only when both lists are short, or the slot is taller than the grid
   return S.refresh(w);
 }
 
