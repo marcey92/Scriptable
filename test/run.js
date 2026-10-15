@@ -333,7 +333,7 @@ async function run(file, opts = {}) {
     "no updated at all counts as stale": ({ text }) => /Stale$/.test(text.split("\n")[0]),
   }, note: "no timestamp" });
   await run("overview.js", { token: "tok", feeds: aged(2), family: "large", expect: {
-    "the overview's Inbox header shows it too": ({ text }) => /^Inbox\s+Stale since/m.test(text),
+    "the overview's Inbox section row shows it too": ({ text }) => /^\s*Inbox\s+■\s+Stale since/m.test(text),
   }, note: "stale inbox" });
   files["/docs/swiss-orders.json"] = savedCache2;
   // events Hermes pushes to the calendar feed: added once, updated when changed, never duplicated
@@ -364,7 +364,7 @@ async function run(file, opts = {}) {
   ] } });
   await run("hermes.js", { token: "tok", feeds: activity(0.05), family: "medium", expect: {
     "header shows when Hermes last ran": ({ text }) => /^Hermes\s+\d\d:\d\d$/.test(text.split("\n")[0]),
-    "one line per action: time, kind, what": ({ text }) => /\d\d:\d\d\s+Calendar\s+Added Flight to Cancún/.test(text) && text.includes("Marked 4 newsletters read"),
+    "one line per action: time, kind, what": ({ text }) => /\d\d:\d\d·?\s+Calendar\s+Added Flight to Cancún/.test(text) && text.includes("Marked 4 newsletters read"),
     "no failure line when the sync is fine": ({ text }) => !text.includes("★"),
   }, note: "activity" });
   await run("hermes.js", { token: "tok", feeds: activity(3), family: "medium", expect: {
@@ -388,41 +388,39 @@ async function run(file, opts = {}) {
   savedEvents.length = 0;   // the tests below expect only the stand-in calendar
   for (const family of ["large", "medium", "accessoryInline"]) await run("overview.js", { ...widgetOpts, family });
   await run("overview.js", { ...widgetOpts, family: "large", expect: {
-    "three sections in order: habits, calendar days, inbox": ({ text }) => { const l = text.split("\n"); const h = l.findIndex(x => /^Habits/.test(x)), c = l.findIndex(x => /^\s*Today/.test(x)), i = l.findIndex(x => /^\s*Inbox/.test(x)); return h === 0 && h < c && c < i; },
-    "each later day gets its own heading with a rule": ({ text }) => { const l = text.split("\n"); const i = l.findIndex(x => /^Tomorrow\s+\d\d\.\d\d$/.test(x)); return i > 0 && /^─/.test(l[i + 1]); },
-    "a long title gets a line of its own": ({ text }) => /^14:00\s+Psychoanalysis \| Mayessi Svoronou$/m.test(text),
-    "the Habits header shows the date, not the next event": ({ text }) => /^Habits\s+[A-Z][a-z]{2} \d\d\.\d\d$/.test(text.split("\n")[0]),
+    "ruler first: the date, then 13 day initials": ({ text }) => /^[A-Z][a-z]{2} \d\d\.\d\d(\s+[A-Z]){13}\s*$/.test(text.split("\n")[0]),
+    "then the Calendar and Inbox section rows, in that order": ({ text }) => { const l = text.split("\n"); const c = l.findIndex(x => /^\s*Calendar\s+■/.test(x)), i = l.findIndex(x => /^\s*Inbox\s+■/.test(x)); return c === 5 && c < i; },
+    "calendar rows are day | time | what, the day on each day's first row": ({ text }) => /^[A-Z]{3}\s+14:00\s+Psychoanalysis \| Mayessi Svoronou$/m.test(text),
+    "a 1 pt day rule starts each later day": ({ text }) => { const l = text.split("\n"); const i = l.findIndex(x => /Psychoanalysis/.test(x)); return /^─/.test(l[i - 1]); },
+    "Inbox rows are day | time | sender | detail": ({ text }) => /^[A-Z]{3}\s+\d\d:\d\d\s+Zalando\s+Out for delivery/m.test(text),
+    "Inbox shows at most 5 items": ({ text }) => { const l = text.split("\n"); const i = l.findIndex(x => /^\s*Inbox\s+■/.test(x)); return l.length - i - 1 <= 5; },
+    "every row fits the grid: no stretchy gaps between sections": ({ widget }) => widget.children.filter(c => c.spacer === "flex").length === 1 && widget.children[widget.children.length - 1].spacer === "flex",
     "habit rows are drawn": ({ text }) => /^Anki/m.test(text) && /^Gratitude/m.test(text),
     "calendar rows are drawn": ({ text }) => text.includes("Late dinner"),
     "now rows are drawn": ({ text }) => text.includes("★ Parcel"),
-    "habit rows end with their count": ({ text }) => /^Anki(\s+[□■])+\s+\d\d$/m.test(text),
+    "habit rows: name, 13 boxes, count": ({ text }) => /^Anki(\s+[□■]){13}\s+\d\d$/m.test(text),
   }, note: "contents" });
   await run("overview.js", { ...widgetOpts, family: "large", events: [], expect: {
     "tapping the calendar opens Calendar, tapping the Inbox opens Mail": ({ widget }) => {
       const urls = widget.children.filter(c => c.url).map(c => c.url);
       return urls.includes("calshow://") && urls.includes("message://");
     },
-    "Inbox is pinned to the bottom: a flexible space before its header, none after its rows": ({ widget }) => {
-      const kids = widget.children, last = kids[kids.length - 1];
-      const flex = kids.map((c, i) => c.spacer === "flex" ? i : -1).filter(i => i >= 0);
-      return flex.length === 1 && last.spacer === undefined;
-    },
-    "an empty week still leaves Now its rows": ({ text }) => text.includes("Nothing this week") && text.includes("Zalando") && text.includes("Amazon"),
+    "an empty week takes one row": ({ text }) => /Nothing in the next 7 days/.test(text) && text.includes("Zalando"),
   }, note: "empty calendar" });
   {
     const at = (d, h) => { const x = new Date(); x.setDate(x.getDate() + d); x.setHours(h, 0, 0, 0); return x; };
     const busy = [];
     for (let d = 1; d <= 6; d++) for (const h of [10, 14]) busy.push({ title: `Event ${d}-${h}`, startDate: at(d, h), endDate: at(d, h + 1), isAllDay: false, cal: "Home" });
     await run("overview.js", { ...widgetOpts, events: busy, family: "large", expect: {
-      "two short events share a line": ({ text }) => /^10:00\s+Event 1-10\s+14:00\s+Event 1-14$/m.test(text),
-      "a busy calendar leaves Inbox at least three rows": ({ text }) => { const l = text.split("\n"); const i = l.findIndex(x => /^\s*Inbox/.test(x)); return l.length - i - 2 >= 3; },
+      "one event per row; a day's later events leave the day blank": ({ text }) => /^[A-Z]{3}\s+10:00\s+Event 1-10$/m.test(text) && /^\s+14:00\s+Event 1-14$/m.test(text),
+      "the calendar fills the rows Inbox doesn't take, and says what's left": ({ text }) => { const l = text.split("\n"); const c = l.findIndex(x => /^\s*Calendar/.test(x)), i = l.findIndex(x => /^\s*Inbox\s+■/.test(x)); return i - c - 1 >= 7 && /^\s*Calendar\s+■\s+\+\d+ later$/m.test(text); },
     }, note: "busy calendar" });
     const short = { now: { schema_version: 2, updated: iso(0), items: [
       { when: iso(1), star: false, title: "Amazon", detail: "Dispatched" },
       { when: iso(2), star: false, title: "DHL", detail: "With courier" },
     ] } };
     await run("overview.js", { token: "tok", feeds: short, events: busy, family: "large", expect: {
-      "a short Inbox shows all its items": ({ text }) => text.includes("Amazon") && text.includes("DHL"),
+      "a short Inbox shows all its items, and the calendar takes the rest": ({ text }) => text.includes("Amazon") && text.includes("DHL") && /Event 5-10/.test(text),
     }, note: "busy calendar, short inbox" });
   }
   {
@@ -438,13 +436,12 @@ async function run(file, opts = {}) {
       { title: "TT", startDate: at(3, 12), endDate: at(3, 13), isAllDay: false, cal: "Home" },
     ];
     await run("overview.js", { ...widgetOpts, events: trip, family: "large", expect: {
-      "a multi-day all-day event is in every shown day's heading": ({ text }) => /^\s*Today\s+Parents Canada · /m.test(text) && /^Saturday\s+Parents Canada · /m.test(text),
-      "days with only that repeat are skipped, so the next real event shows": ({ text }) => /^12:00\s+TT$/m.test(text) && !/^\s*Tomorrow/m.test(text),
+      "a multi-day all-day event is one row, timed until its last day": ({ text }) => (text.match(/Parents Canada/g) || []).length === 1 && /^[A-Z]{3}\s+–\d\d\.\d\d\s+Parents Canada$/m.test(text),
+      "days with only that event carried over are skipped": ({ text }) => /^[A-Z]{3}\s+12:00\s+TT$/m.test(text),
     }, note: "multi-day all-day" });
     await run("overview.js", { ...widgetOpts, events: withAllDay, family: "large", expect: {
-      "all-day events go in the day's heading, before the date": ({ text }) => /^\s*Tomorrow\s+Bank holiday · \d\d\.\d\d$/m.test(text),
-      "and not as a row": ({ text }) => !/^\S+\s+Bank holiday$/m.test(text),
-      "a day with only all-day events still gets its heading": ({ text }) => /Packing day · \d\d\.\d\d$/m.test(text),
+      "a one-day all-day event comes first in its day, timed —": ({ text }) => /^[A-Z]{3}\s+—\s+Bank holiday$/m.test(text) && text.indexOf("Bank holiday") < text.indexOf("Dentist"),
+      "a day with only an all-day event still shows": ({ text }) => /^[A-Z]{3}\s+—\s+Packing day$/m.test(text),
     }, note: "all-day events" });
   }
   await run("overview.js", { ...widgetOpts, inApp: true, note: "preview" });

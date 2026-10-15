@@ -11,7 +11,7 @@ Scriptable widgets for iOS in one fixed style: a title, a hairline rule, then ro
 | `orders.js` | "Inbox": one list of parcels and important emails, urgent ones get a ★ (from the misc server) | Small, medium, large, Lock Screen |
 | `hermes.js` | What Hermes did on its own, one line each; header shows when it last ran. A failed calendar add on the phone shows as a ★ line | Small, medium, large |
 | `quotes.js` | A mock-motivational work quote, new each day; each weekday has its own | Lock Screen, small, medium |
-| `overview.js` | Calendar, habits and Inbox stacked in one widget; tap a habit row to tick today | Large |
+| `overview.js` | Habits, calendar and Inbox set like a timetable on a 15 pt grid: a day ruler over 13 days of habits, then day / time / what for events and mail (Inbox at most 5); tap a habit to tick it | Large |
 | `swiss.js` | The shared style. Not a widget; the others load it | |
 | `lib-calendar.js`, `lib-habits.js`, `lib-now.js` | The calendar, habit and Inbox logic, shared by their own widget and `overview.js`. Not widgets | |
 | `update.js` | Pulls the latest scripts from this repo | Run in the app |
