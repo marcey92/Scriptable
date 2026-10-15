@@ -84,12 +84,11 @@ function buildWidget(result, label) {
 }
 
 // ---- the overview's calendar, set as a timetable: day | time | what ----
-// Each day's first row names the day (THU) and, from the second day on, carries a 1 pt day rule. All-day
+// Each day's first row names the day (THU); its other rows leave the day column blank. All-day
 // events come first in their day, timed "—", or "–22.10" when they run past that day; an all-day event
 // spanning several days is listed once, on the first day shown.
 function timetableRows(result) {
   const rows = [], seen = new Set();
-  let dayIndex = 0;
   for (const d of result.days || []) {
     const next = S.dayStart(d.offset + 1);
     const list = [];
@@ -105,8 +104,7 @@ function timetableRows(result) {
     if (!list.length) continue;
     // within a week the weekday is unambiguous ("THU"); further out the day is named by its date ("22.10")
     const name = d.offset < 7 ? S.WD[d.date.getDay()].slice(0, 3).toUpperCase() : S.dayMonth(d.date);
-    list.forEach((r, i) => rows.push({ ...r, day: i === 0 ? name : "", rule: i === 0 && dayIndex > 0 }));
-    dayIndex++;
+    list.forEach((r, i) => rows.push({ ...r, day: i === 0 ? name : "" }));
   }
   return rows;
 }
@@ -115,8 +113,7 @@ function timetableRows(result) {
 function drawTimetable(w, W, rows, n) {
   if (!rows.length) { S.gRow(w, W, [{ text: "", w: S.G.KEY }, { text: "Nothing in the next two weeks" }]); return; }
   for (const r of rows.slice(0, n)) {
-    const cells = [{ text: r.day, w: S.G.D, font: S.F.key }, { text: r.time, w: S.G.T, font: S.F.mono }, { text: r.title }];
-    if (r.rule) S.gDayRow(w, W, cells); else S.gRow(w, W, cells);
+    S.gRow(w, W, [{ text: r.day, w: S.G.D, font: S.F.key }, { text: r.time, w: S.G.T, font: S.F.mono }, { text: r.title }]);
   }
 }
 

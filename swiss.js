@@ -102,13 +102,6 @@ S.gRow = (parent, W, cells, h = S.M) => {
   for (const c of cells) S.gCell(row, c.w ? c : { ...c, w: W - fixed }, h);
   return row;
 };
-// a row that starts a new day: a 1 pt rule inside the top of the row, so it costs no height
-S.gDayRow = (parent, W, cells) => {
-  const box = parent.addStack(); box.layoutVertically(); box.size = new Size(W, S.M);
-  const rule = box.addStack(); rule.size = new Size(W, 1); rule.backgroundColor = S.FG;
-  S.gRow(box, W, cells, S.M - 1);
-  return box;
-};
 // a section row: the label hangs in the key column, a 2 pt rule runs to the right edge, an optional
 // status sits at the end of the rule ("+3 later", "Stale since 14:02")
 S.gSection = (parent, W, label, status) => {

@@ -391,7 +391,7 @@ async function run(file, opts = {}) {
     "ruler first: the date, then 12 day initials": ({ text }) => /^[A-Z][a-z]{2} \d\d\.\d\d(\s+[A-Z]){12}\s*$/.test(text.split("\n")[0]),
     "then the Calendar and Inbox section rows, in that order": ({ text }) => { const l = text.split("\n"); const c = l.findIndex(x => /^\s*Calendar\s+■/.test(x)), i = l.findIndex(x => /^\s*Inbox\s+■/.test(x)); return c === 5 && c < i; },
     "calendar rows are day | time | what, the day on each day's first row": ({ text }) => /^[A-Z]{3}\s+14:00\s+Psychoanalysis \| Mayessi Svoronou$/m.test(text),
-    "a 1 pt day rule starts each later day": ({ text }) => { const l = text.split("\n"); const i = l.findIndex(x => /Psychoanalysis/.test(x)); return /^─/.test(l[i - 1]); },
+    "no rules between days, only the day name": ({ text }) => { const l = text.split("\n"); const i = l.findIndex(x => /Psychoanalysis/.test(x)); return !/^─/.test(l[i - 1]); },
     "Inbox rows are day | time | sender | detail": ({ text }) => /^[A-Z]{3}\s+\d\d:\d\d\s+Zalando\s+Out for delivery/m.test(text),
     "Inbox shows at most 5 items": ({ text }) => { const l = text.split("\n"); const i = l.findIndex(x => /^\s*Inbox\s+■/.test(x)); return l.length - i - 1 <= 5; },
     "every row fits the grid: no stretchy gaps between sections": ({ widget }) => widget.children.filter(c => c.spacer === "flex").length === 1 && widget.children[widget.children.length - 1].spacer === "flex",
