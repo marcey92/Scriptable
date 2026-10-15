@@ -71,6 +71,11 @@ function describe(node) {
   return kids.join(node.vertical ? "\n" : "  ");
 }
 async function run(file, opts = {}) {
+  const realNow = Date.now;
+  if (opts.clock) Date.now = () => opts.clock.getTime();   // pretend it's another time (habit day turnover)
+  try { return await runInner(file, opts); } finally { Date.now = realNow; }
+}
+async function runInner(file, opts) {
   const now = new Date();
   const at = (dayOffset, h, m = 0) => { const d = new Date(now); d.setDate(d.getDate() + dayOffset); d.setHours(h, m, 0, 0); return d; };
   const events = opts.events || [
@@ -193,6 +198,16 @@ async function run(file, opts = {}) {
   for (const family of ["medium", "large", ...lock]) await run("habit-grid.js", { family });
   await run("habit-grid.js", { inApp: true, note: "menu" });
   await run("habit-grid.js", { inApp: true, query: { habit: "Meditate" }, note: "one-tap" });
+  {
+    const early = new Date(); early.setHours(1, 30, 0, 0);
+    const day = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const before = new Date(early); before.setDate(before.getDate() - 1);
+    files["/docs/habit-grid.json"] = JSON.stringify({});
+    await run("habit-grid.js", { inApp: true, query: { habit: "Gratitude" }, clock: early, expect: {
+      "a tick at 01:30 counts for the day before (the habit day turns over at 4am)": ({ files }) => JSON.parse(files["/docs/habit-grid.json"]).Gratitude.includes(day(before)),
+    }, note: "tick at 01:30" });
+    files["/docs/habit-grid.json"] = JSON.stringify({ Anki: [new Date().toISOString().slice(0, 10)] });
+  }
   await run("habit-grid.js", { family: "medium", note: "after one-tap" });
   for (const family of [...home, "accessoryRectangular", "accessoryInline"]) await run("calendar-list.js", { family });
   await run("calendar-list.js", { family: "medium", param: "Google: you@gmail.com", note: "Google parameter" });
