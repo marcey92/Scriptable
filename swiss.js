@@ -107,13 +107,18 @@ S.gRow = (parent, W, cells, h = S.M) => {
 // text on white), then a 2 pt rule to the right edge, with an optional status at its end
 // ("Stale since 14:02")
 const SIGN_GAP = 6;   // between the white block and the rule
-S.gSection = (parent, W, label, status) => {
-  const row = parent.addStack(); row.size = new Size(W, S.M); row.centerAlignContent(); row.spacing = 0;
+// the sign itself: a white block in the key column, navy text, then the gap (KEY wide in all)
+S.gSign = (row, label) => {
   const sign = row.addStack(); sign.size = new Size(S.G.KEY - SIGN_GAP, S.M - 1); sign.centerAlignContent();
   sign.backgroundColor = S.FG; sign.setPadding(0, 4, 0, 0);
   const t = sign.addText(label); t.lineLimit = 1; t.font = S.F.key; t.textColor = S.BG;
   sign.addSpacer();
   row.addSpacer(SIGN_GAP);
+  return sign;
+};
+S.gSection = (parent, W, label, status) => {
+  const row = parent.addStack(); row.size = new Size(W, S.M); row.centerAlignContent(); row.spacing = 0;
+  S.gSign(row, label);
   const statusW = status ? 111 : 0;
   const rule = row.addStack(); rule.size = new Size(W - S.G.KEY - statusW, 2); rule.backgroundColor = S.FG;
   if (status) { row.addSpacer(6); S.gCell(row, { text: status, w: 105, font: S.F.key, right: true }, S.M); }
