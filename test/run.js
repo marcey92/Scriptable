@@ -428,7 +428,7 @@ async function runInner(file, opts) {
     for (let d = 1; d <= 6; d++) for (const h of [10, 14]) busy.push({ title: `Event ${d}-${h}`, startDate: at(d, h), endDate: at(d, h + 1), isAllDay: false, cal: "Home" });
     await run("overview.js", { ...widgetOpts, events: busy, family: "large", expect: {
       "one event per row; a day's later events leave the day blank": ({ text }) => /^[A-Z]{3}\s+10:00\s+Event 1-10$/m.test(text) && /^\s+14:00\s+Event 1-14$/m.test(text),
-      "the calendar fills the rows Inbox doesn't take, and says what's left": ({ text }) => { const l = text.split("\n"); const c = l.findIndex(x => /^\s*Calendar/.test(x)), i = l.findIndex(x => /^\s*Inbox\s+■/.test(x)); return i - c - 1 >= 7 && /^\s*Calendar\s+■\s+\+\d+ later$/m.test(text); },
+      "the calendar fills the rows Inbox doesn't take, with no count of what's left": ({ text }) => { const l = text.split("\n"); const c = l.findIndex(x => /^\s*Calendar/.test(x)), i = l.findIndex(x => /^\s*Inbox\s+■/.test(x)); return i - c - 1 >= 7 && /^\s*Calendar\s+■$/m.test(text); },
     }, note: "busy calendar" });
     const short = { now: { schema_version: 2, updated: iso(0), items: [
       { when: iso(1), star: false, title: "Amazon", detail: "Dispatched" },
