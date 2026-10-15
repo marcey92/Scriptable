@@ -405,7 +405,7 @@ async function run(file, opts = {}) {
       const urls = widget.children.filter(c => c.url).map(c => c.url);
       return urls.includes("calshow://") && urls.includes("message://");
     },
-    "an empty week takes one row": ({ text }) => /Nothing in the next 7 days/.test(text) && text.includes("Zalando"),
+    "an empty week takes one row": ({ text }) => /Nothing in the next two weeks/.test(text) && text.includes("Zalando"),
   }, note: "empty calendar" });
   {
     const at = (d, h) => { const x = new Date(); x.setDate(x.getDate() + d); x.setHours(h, 0, 0, 0); return x; };
@@ -419,6 +419,16 @@ async function run(file, opts = {}) {
       { when: iso(1), star: false, title: "Amazon", detail: "Dispatched" },
       { when: iso(2), star: false, title: "DHL", detail: "With courier" },
     ] } };
+    const far = [
+      { title: "Soon", startDate: at(2, 10), endDate: at(2, 11), isAllDay: false, cal: "Home" },
+      { title: "Far away", startDate: at(9, 10), endDate: at(9, 11), isAllDay: false, cal: "Home" },
+    ];
+    const farDate = (() => { const x = at(9, 0); return `${String(x.getDate()).padStart(2, "0")}.${String(x.getMonth() + 1).padStart(2, "0")}`; })();
+    await run("overview.js", { ...widgetOpts, events: far, family: "large", expect: {
+      "the calendar looks two weeks ahead": ({ text }) => text.includes("Far away"),
+      "within a week the day is a weekday": ({ text }) => /^[A-Z]{3}\s+10:00\s+Soon$/m.test(text),
+      "beyond a week it is the date": ({ text }) => new RegExp(`^${farDate.replace(".", "\\.")}\\s+10:00\\s+Far away$`, "m").test(text),
+    }, note: "two weeks ahead" });
     await run("overview.js", { token: "tok", feeds: short, events: busy, family: "large", expect: {
       "a short Inbox shows all its items, and the calendar takes the rest": ({ text }) => text.includes("Amazon") && text.includes("DHL") && /Event 5-10/.test(text),
     }, note: "busy calendar, short inbox" });

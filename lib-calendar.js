@@ -11,7 +11,7 @@ function dayTitle(offset, d, label) {
 
 // ---- calendar ----
 // returns { days: [{ offset, date, events }] }, or { error } when something is missing
-async function loadDays(names, allDay = SHOW_ALL_DAY) {
+async function loadDays(names, allDay = SHOW_ALL_DAY, lookAhead = LOOK_AHEAD) {
   try {
     let cals = [];
     if (names.length) {
@@ -21,10 +21,10 @@ async function loadDays(names, allDay = SHOW_ALL_DAY) {
       if (!cals.length) return { error: `No calendar named ${names.join(", ")}` };
     }
     const now = new Date();
-    const evs = await CalendarEvent.between(S.dayStart(0), S.dayStart(LOOK_AHEAD), cals);
+    const evs = await CalendarEvent.between(S.dayStart(0), S.dayStart(lookAhead), cals);
     const order = (a, b) => (b.isAllDay - a.isAllDay) || (a.startDate - b.startDate);
     const days = [];
-    for (let i = 0; i < LOOK_AHEAD; i++) {
+    for (let i = 0; i < lookAhead; i++) {
       const s = S.dayStart(i), e = S.dayStart(i + 1);
       const list = evs.filter(ev => {
         if (ev.isAllDay) return allDay && ev.startDate < e && ev.endDate > s;         // every day it covers
@@ -103,7 +103,9 @@ function timetableRows(result) {
       } else list.push({ time: S.timeLabel(e.startDate), title: e.title });
     }
     if (!list.length) continue;
-    list.forEach((r, i) => rows.push({ ...r, day: i === 0 ? S.WD[d.date.getDay()].slice(0, 3).toUpperCase() : "", rule: i === 0 && dayIndex > 0 }));
+    // within a week the weekday is unambiguous ("THU"); further out the day is named by its date ("22.10")
+    const name = d.offset < 7 ? S.WD[d.date.getDay()].slice(0, 3).toUpperCase() : S.dayMonth(d.date);
+    list.forEach((r, i) => rows.push({ ...r, day: i === 0 ? name : "", rule: i === 0 && dayIndex > 0 }));
     dayIndex++;
   }
   return rows;
@@ -111,7 +113,7 @@ function timetableRows(result) {
 
 // the first `n` timetable rows into a stack W wide
 function drawTimetable(w, W, rows, n) {
-  if (!rows.length) { S.gRow(w, W, [{ text: "", w: S.G.KEY }, { text: "Nothing in the next 7 days" }]); return; }
+  if (!rows.length) { S.gRow(w, W, [{ text: "", w: S.G.KEY }, { text: "Nothing in the next two weeks" }]); return; }
   for (const r of rows.slice(0, n)) {
     const cells = [{ text: r.day, w: S.G.D, font: S.F.key }, { text: r.time, w: S.G.T, font: S.F.mono }, { text: r.title }];
     if (r.rule) S.gDayRow(w, W, cells); else S.gRow(w, W, cells);
