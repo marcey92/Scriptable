@@ -20,6 +20,7 @@ class Stack {
     const x = new Text(t); this.children.push(x); return x;
   }
   addSpacer(n) { this.children.push({ spacer: n === undefined ? "flex" : n }); }
+  addImage(img) { const x = new Text(img.drawn.join(" ")); x.image = img; this.children.push(x); return x; }
   centerAlignContent() {} bottomAlignContent() {} topAlignContent() {}
   layoutHorizontally() { this.vertical = false; } layoutVertically() { this.vertical = true; }
   setPadding(...p) { this.padding = p; }
@@ -90,6 +91,16 @@ async function runInner(file, opts) {
     args: { widgetParameter: opts.param || null, queryParameters: opts.query || {} },
     Color: class { constructor(hex, alpha = 1) { this.hex = hex; this.alpha = alpha; } static white() { return new g.Color("#FFFFFF"); } },
     Size: class { constructor(w, h) { this.width = w; this.height = h; } },
+    Rect: class { constructor(x, y, w, h) { this.x = x; this.y = y; this.width = w; this.height = h; } },
+    DrawContext: class {
+      constructor() { this.drawn = []; this.font = null; }
+      setTextAlignedCenter() {} setTextColor() {} setFont(f) { this.font = f; }
+      drawTextInRect(t, r) {
+        if (r.x < 0 || r.x + r.width > this.size.width) throw new Error(`text at ${r.x} is outside the ${this.size.width} pt picture`);
+        this.drawn.push(t); (this.rects = this.rects || []).push(r);
+      }
+      getImage() { return { drawn: this.drawn, rects: this.rects, size: this.size }; }
+    },
     Font: new Proxy({}, { get: (_, name) => size => ({ name, size }) }),
     ListWidget,
     Device: {
@@ -403,7 +414,10 @@ async function runInner(file, opts) {
   savedEvents.length = 0;   // the tests below expect only the stand-in calendar
   for (const family of ["large", "medium", "accessoryInline"]) await run("overview.js", { ...widgetOpts, family });
   await run("overview.js", { ...widgetOpts, family: "large", expect: {
-    "ruler first: the date, then 12 day initials on one line": ({ text }) => /^[A-Z][a-z]{2} \d\d\.\d\d\s+([A-Z] ){11}\s*[A-Z]\s*$/.test(text.split("\n")[0]),
+    "ruler first: the date, then 12 day initials, each placed over its box": ({ text, widget }) => {
+      const img = widget.children[0].children.find(c => c.image);
+      return /^[A-Z][a-z]{2} \d\d\.\d\d\s+([A-Z] ){11}[A-Z]\s*$/.test(text.split("\n")[0]) && img.image.rects.every((r, i) => r.x === i * 15 && r.width === 12);
+    },
     "then the Calendar and Inbox section rows, in that order": ({ text }) => { const l = text.split("\n"); const c = l.findIndex(x => /^\s*Calendar\s+■/.test(x)), i = l.findIndex(x => /^\s*Inbox\s+■/.test(x)); return c === 5 && c < i; },
     "calendar rows are day | time | what, the day on each day's first row": ({ text }) => /^[A-Z]{3}\s+14:00\s+Psychoanalysis \| Mayessi Svoronou$/m.test(text),
     "no rules between days, only the day name": ({ text }) => { const l = text.split("\n"); const i = l.findIndex(x => /Psychoanalysis/.test(x)); return !/^─/.test(l[i - 1]); },

@@ -138,16 +138,20 @@ function drawGrid(w, W, data, runURL) {
   const ruler = w.addStack(); ruler.size = new Size(W, S.M); ruler.centerAlignContent(); ruler.spacing = 0;
   ruler.url = `${runURL}?menu=1`;
   S.gCell(ruler, { text: S.dateLabel(), w: S.G.KEY, font: S.F.key }, S.M);
-  // the initials as one line of text, not one tiny cell each (text in cells narrower than ~15 pt gets
-  // clipped on the phone). A monospaced font at 12.5 pt advances 7.5 pt per character, so a letter plus a
-  // space is exactly one 15 pt slot; 2 pt in, each letter sits over the centre of its 12 pt box.
-  const letters = ruler.addStack(); letters.size = new Size(GRID_DAYS * S.M, S.M); letters.centerAlignContent();
-  letters.addSpacer(2);
-  const past = letters.addText(days.slice(0, -1).map(d => S.WD[d.getDay()][0] + " ").join(""));
-  past.font = Font.regularMonospacedSystemFont(12.5); past.textColor = S.FG; past.lineLimit = 1;
-  const today = letters.addText(S.WD[days[days.length - 1].getDay()][0]);
-  today.font = Font.boldMonospacedSystemFont(12.5); today.textColor = S.FG; today.lineLimit = 1;
-  letters.addSpacer();
+  // the initials are drawn into a picture, each centred over its box at exactly 15 pt spacing: laid out
+  // as text they either clipped (narrow cells) or drifted (the font's real width differs on the phone)
+  const ctx = new DrawContext();
+  ctx.size = new Size(GRID_DAYS * S.M, S.M);
+  ctx.opaque = false;
+  ctx.respectScreenScale = true;
+  ctx.setTextAlignedCenter();
+  ctx.setTextColor(S.FG);
+  days.forEach((d, i) => {
+    ctx.setFont(i === days.length - 1 ? S.F.key : S.F.text);
+    ctx.drawTextInRect(S.WD[d.getDay()][0], new Rect(i * S.M, 1, GRID_BOX, S.M - 1));
+  });
+  const img = ruler.addImage(ctx.getImage());
+  img.imageSize = new Size(GRID_DAYS * S.M, S.M);
   S.gCell(ruler, { text: "", w: countW }, S.M);
 
   for (const h of HABITS) {
