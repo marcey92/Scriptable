@@ -135,9 +135,15 @@ function drawGrid(w, W, data, runURL) {
   const ruler = w.addStack(); ruler.size = new Size(W, S.M); ruler.centerAlignContent(); ruler.spacing = 0;
   ruler.url = `${runURL}?menu=1`;
   S.gCell(ruler, { text: S.dateLabel(), w: S.G.KEY, font: S.F.key }, S.M);
+  // initials in the monospaced font (every letter the same narrow width, so M and W fit), centred over
+  // the 12 pt box at the left of each 15 pt slot
   days.forEach((d, i) => {
     const today = i === days.length - 1;
-    S.gCell(ruler, { text: S.WD[d.getDay()][0], w: S.M, font: today ? S.F.key : S.F.text }, S.M);
+    const c = ruler.addStack(); c.size = new Size(S.M, S.M); c.centerAlignContent();
+    c.addSpacer(3);
+    const t = c.addText(S.WD[d.getDay()][0]); t.lineLimit = 1;
+    t.font = today ? S.F.monoKey : S.F.mono; t.textColor = S.FG;
+    c.addSpacer();
   });
   S.gCell(ruler, { text: "", w: countW }, S.M);
 
