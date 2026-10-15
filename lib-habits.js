@@ -122,24 +122,19 @@ function drawRows(w, innerW, cell, data, runURL) {
 
 // ---- the overview's habit band, on the 15 pt grid ----
 // A ruler row (the date in the key column, then each day's initial over its column, today in semibold;
-// tapping it opens the menu), then one row per habit: name | 13 boxes | count of the 13 days.
-const GRID_DAYS = 13, GRID_BOX = 12;
+// tapping it opens the menu), then one row per habit: name | a box per day | count of the days shown.
+// Each day is one 15 pt slot: a 12 pt box (or the initial) at its left, then the 3 pt gap.
+const GRID_DAYS = 12, GRID_BOX = 12;
 function drawGrid(w, W, data, runURL) {
   const days = lastDays(GRID_DAYS);
-  const countW = W - S.G.KEY - GRID_DAYS * GRID_BOX - GRID_DAYS * S.BOX_GAP;
+  const countW = W - S.G.KEY - GRID_DAYS * S.M;
   const ruler = w.addStack(); ruler.size = new Size(W, S.M); ruler.centerAlignContent(); ruler.spacing = 0;
   ruler.url = `${runURL}?menu=1`;
   S.gCell(ruler, { text: S.dateLabel(), w: S.G.KEY, font: S.F.key }, S.M);
   days.forEach((d, i) => {
-    if (i > 0) ruler.addSpacer(S.BOX_GAP);
     const today = i === days.length - 1;
-    const c = ruler.addStack(); c.size = new Size(GRID_BOX, S.M); c.centerAlignContent();
-    c.addSpacer();
-    const t = c.addText(S.WD[d.getDay()][0]); t.lineLimit = 1;
-    t.font = today ? S.F.key : S.F.text; t.textColor = S.FG;
-    c.addSpacer();
+    S.gCell(ruler, { text: S.WD[d.getDay()][0], w: S.M, font: today ? S.F.key : S.F.text }, S.M);
   });
-  ruler.addSpacer(S.BOX_GAP);
   S.gCell(ruler, { text: "", w: countW }, S.M);
 
   for (const h of HABITS) {
@@ -147,12 +142,11 @@ function drawGrid(w, W, data, runURL) {
     row.url = `${runURL}?habit=${encodeURIComponent(h)}`;
     S.gCell(row, { text: h, w: S.G.KEY }, S.M);
     let done = 0;
-    days.forEach((d, i) => {
-      if (i > 0) row.addSpacer(S.BOX_GAP);
+    for (const d of days) {
       const on = isDone(data, h, d); if (on) done++;
       S.box(row, GRID_BOX, on);
-    });
-    row.addSpacer(S.BOX_GAP);
+      row.addSpacer(S.M - GRID_BOX);
+    }
     S.gCell(row, { text: S.p(done), w: countW, font: S.F.mono, right: true }, S.M);
   }
 }

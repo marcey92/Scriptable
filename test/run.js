@@ -388,7 +388,7 @@ async function run(file, opts = {}) {
   savedEvents.length = 0;   // the tests below expect only the stand-in calendar
   for (const family of ["large", "medium", "accessoryInline"]) await run("overview.js", { ...widgetOpts, family });
   await run("overview.js", { ...widgetOpts, family: "large", expect: {
-    "ruler first: the date, then 13 day initials": ({ text }) => /^[A-Z][a-z]{2} \d\d\.\d\d(\s+[A-Z]){13}\s*$/.test(text.split("\n")[0]),
+    "ruler first: the date, then 12 day initials": ({ text }) => /^[A-Z][a-z]{2} \d\d\.\d\d(\s+[A-Z]){12}\s*$/.test(text.split("\n")[0]),
     "then the Calendar and Inbox section rows, in that order": ({ text }) => { const l = text.split("\n"); const c = l.findIndex(x => /^\s*Calendar\s+■/.test(x)), i = l.findIndex(x => /^\s*Inbox\s+■/.test(x)); return c === 5 && c < i; },
     "calendar rows are day | time | what, the day on each day's first row": ({ text }) => /^[A-Z]{3}\s+14:00\s+Psychoanalysis \| Mayessi Svoronou$/m.test(text),
     "a 1 pt day rule starts each later day": ({ text }) => { const l = text.split("\n"); const i = l.findIndex(x => /Psychoanalysis/.test(x)); return /^─/.test(l[i - 1]); },
@@ -398,7 +398,7 @@ async function run(file, opts = {}) {
     "habit rows are drawn": ({ text }) => /^Anki/m.test(text) && /^Gratitude/m.test(text),
     "calendar rows are drawn": ({ text }) => text.includes("Late dinner"),
     "now rows are drawn": ({ text }) => text.includes("★ Parcel"),
-    "habit rows: name, 13 boxes, count": ({ text }) => /^Anki(\s+[□■]){13}\s+\d\d$/m.test(text),
+    "habit rows: name, 12 boxes, count": ({ text }) => /^Anki(\s+[□■]){12}\s+\d\d$/m.test(text),
   }, note: "contents" });
   await run("overview.js", { ...widgetOpts, family: "large", events: [], expect: {
     "tapping the calendar opens Calendar, tapping the Inbox opens Mail": ({ widget }) => {
