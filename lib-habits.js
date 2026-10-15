@@ -138,15 +138,15 @@ function drawGrid(w, W, data, runURL) {
   const ruler = w.addStack(); ruler.size = new Size(W, S.M); ruler.centerAlignContent(); ruler.spacing = 0;
   ruler.url = `${runURL}?menu=1`;
   S.gCell(ruler, { text: S.dateLabel(), w: S.G.KEY, font: S.F.key }, S.M);
-  // initials in the monospaced font (every letter the same narrow width, so M and W fit), centred over
-  // the 12 pt box at the left of each 15 pt slot
+  // initials in the monospaced font, each alone in a 12 pt slot exactly over its box (a fixed-size stack
+  // centres its content), then the fixed 3 pt gap. No flexible spacers: iOS gives each one a minimum
+  // width of about 8 pt, which left no room for the letter.
   days.forEach((d, i) => {
     const today = i === days.length - 1;
-    const c = ruler.addStack(); c.size = new Size(S.M, S.M); c.centerAlignContent();
-    c.addSpacer(3);
+    const c = ruler.addStack(); c.size = new Size(GRID_BOX, S.M); c.centerAlignContent();
     const t = c.addText(S.WD[d.getDay()][0]); t.lineLimit = 1;
     t.font = today ? S.F.monoKey : S.F.mono; t.textColor = S.FG;
-    c.addSpacer();
+    ruler.addSpacer(S.M - GRID_BOX);
   });
   S.gCell(ruler, { text: "", w: countW }, S.M);
 
