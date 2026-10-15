@@ -14,6 +14,7 @@ const N = importModule("lib-now");
 // Tapping a habit row ticks it for today, tapping the ruler opens the habit menu, tapping the calendar
 // opens Calendar and tapping the Inbox opens Mail.
 const CALENDAR_URL = "calshow://";
+const LOOK_AHEAD = 14;  // days of calendar: beyond a week, days are named by date
 const INBOX_MAX = 5;   // the Inbox never shows more than this many items; the calendar gets the rest
 
 function build(cal, habits, now) {
@@ -59,7 +60,7 @@ if (!config.runsInWidget && tapped && H.HABITS.includes(tapped)) {
   // the first run in the app asks for calendar access and, if missing, the feed's read token
   const token = await N.token();
   await C.syncFromFeed(token);         // add any events Hermes pushed before reading the calendar
-  const cal = await C.loadDays([], true);   // all-day events too: they go in the day headings
+  const cal = await C.loadDays([], true, LOOK_AHEAD);   // all-day events too: they go in the day headings
   const habits = await H.load();
   const now = await N.load(token);
   const family = config.widgetFamily;
