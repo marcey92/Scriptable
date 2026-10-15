@@ -119,7 +119,7 @@ function drawRows(w, innerW, cell, data, runURL) {
     }
 
     row.addSpacer();
-    const num = row.addText(S.p(done)); num.lineLimit = 1;
+    const num = row.addText(String(done)); num.lineLimit = 1;
     num.font = Font.regularMonospacedSystemFont(textSize); num.textColor = S.FG;
   });
 }
@@ -157,7 +157,7 @@ function drawGrid(w, W, data, runURL) {
       S.box(row, GRID_BOX, on);
       row.addSpacer(S.M - GRID_BOX);
     }
-    S.gCell(row, { text: S.p(done), w: countW, font: S.F.mono, right: true }, S.M);
+    S.gCell(row, { text: String(done), w: countW, font: S.F.mono, right: true }, S.M);
   }
 }
 

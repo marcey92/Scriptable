@@ -11,7 +11,8 @@ function dayTitle(offset, d, label) {
 
 // ---- calendar ----
 // returns { days: [{ offset, date, events }] }, or { error } when something is missing
-async function loadDays(names, allDay = SHOW_ALL_DAY, lookAhead = LOOK_AHEAD) {
+// `hidden`: calendar titles to leave out (the overview's own choice, see chooseCalendars)
+async function loadDays(names, allDay = SHOW_ALL_DAY, lookAhead = LOOK_AHEAD, hidden = []) {
   try {
     let cals = [];
     if (names.length) {
@@ -19,6 +20,10 @@ async function loadDays(names, allDay = SHOW_ALL_DAY, lookAhead = LOOK_AHEAD) {
       const wanted = names.map(n => n.toLowerCase());
       cals = all.filter(c => wanted.includes(c.title.toLowerCase()));
       if (!cals.length) return { error: `No calendar named ${names.join(", ")}` };
+    } else if (hidden.length) {
+      const all = await Calendar.forEvents();
+      cals = all.filter(c => !hidden.includes(c.title));
+      if (!cals.length) return { error: "All calendars are hidden" };
     }
     const now = new Date();
     const evs = await CalendarEvent.between(S.dayStart(0), S.dayStart(lookAhead), cals);
@@ -114,6 +119,32 @@ function drawTimetable(w, W, rows, n) {
   if (!rows.length) { S.gRow(w, W, [{ text: "", w: S.G.KEY }, { text: "Nothing in the next two weeks" }]); return; }
   for (const r of rows.slice(0, n)) {
     S.gRow(w, W, [{ text: r.day, w: S.G.D, font: S.F.key }, { text: r.time, w: S.G.T, font: S.F.mono }, { text: r.title }]);
+  }
+}
+
+// ---- which calendars the overview shows ----
+// Scriptable sees every calendar on the phone, including ones hidden in the Calendar app (holiday
+// calendars, subscriptions), so the overview keeps its own list of calendars to leave out.
+const hiddenFm = FileManager.local();
+const hiddenPath = hiddenFm.joinPath(hiddenFm.documentsDirectory(), "swiss-overview-hidden-calendars.json");
+function hiddenCalendars() {
+  try { return hiddenFm.fileExists(hiddenPath) ? JSON.parse(hiddenFm.readString(hiddenPath)) : []; } catch (e) { return []; }
+}
+// a menu of every calendar, ✓ for shown; tap to hide or show, Done to finish
+async function chooseCalendars() {
+  let all = [];
+  try { all = await Calendar.forEvents(); } catch (e) { return; }
+  const hidden = new Set(hiddenCalendars());
+  while (true) {
+    const a = new Alert();
+    a.title = "Calendars in the overview";
+    for (const c of all) a.addAction((hidden.has(c.title) ? "   " : "✓ ") + c.title);
+    a.addCancelAction("Done");
+    const i = await a.presentSheet();
+    if (i === -1) break;
+    const t = all[i].title;
+    if (hidden.has(t)) hidden.delete(t); else hidden.add(t);
+    try { hiddenFm.writeString(hiddenPath, JSON.stringify([...hidden])); } catch (e) {}
   }
 }
 
@@ -221,4 +252,4 @@ function buildLockRect(result) {
   return w;
 }
 
-module.exports = { syncFromFeed, lastSyncFailure, loadDays, dayTitle, timetableRows, drawTimetable, buildWidget, buildLockRect, lockLines };
+module.exports = { hiddenCalendars, chooseCalendars, syncFromFeed, lastSyncFailure, loadDays, dayTitle, timetableRows, drawTimetable, buildWidget, buildLockRect, lockLines };
