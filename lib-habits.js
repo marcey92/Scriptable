@@ -27,17 +27,21 @@ function save(data) { fm.writeString(path, JSON.stringify(data)); }
 function key(d) {
   return `${d.getFullYear()}-${S.p(d.getMonth() + 1)}-${S.p(d.getDate())}`;
 }
+// the habit day turns over at DAY_STARTS, not midnight: ticking at 1am counts for the evening before
+const DAY_STARTS = 4;   // hour
+function habitNow() { return new Date(Date.now() - DAY_STARTS * 3600 * 1000); }
+
 function lastDays(n) {
   const out = [];
   for (let i = n - 1; i >= 0; i--) {
-    const d = new Date(); d.setDate(d.getDate() - i); out.push(d);
+    const d = habitNow(); d.setDate(d.getDate() - i); out.push(d);
   }
   return out;
 }
 
 // ---- ticking ----
 function toggle(data, h) {
-  const today = key(new Date()), list = data[h] || [];
+  const today = key(habitNow()), list = data[h] || [];
   data[h] = list.includes(today) ? list.filter(x => x !== today) : [...list, today];
   save(data);
 }
@@ -58,7 +62,7 @@ async function nextEvent() {
 
 // ---- tick-off menu (tap the header, or run the script in the app) ----
 async function menu(data) {
-  const today = new Date();
+  const today = habitNow();
   while (true) {
     const a = new Alert();
     a.title = "Today's habits";
@@ -180,7 +184,7 @@ function buildLockRect(data) {
 // circular: today only, one box per habit
 function buildLockCircle(data) {
   const w = S.lockWidget();
-  const today = new Date();
+  const today = habitNow();
   const size = Math.max(6, Math.min(12, Math.floor(44 / HABITS.length) - 3));
   w.addSpacer();
   HABITS.forEach((h, i) => {
@@ -196,7 +200,7 @@ function buildLockCircle(data) {
 
 // inline: the text line above the clock
 function buildLockInline(data) {
-  const today = new Date();
+  const today = habitNow();
   const done = HABITS.filter(h => isDone(data, h, today)).length;
   return S.lockInline(`${TITLE} ${done}/${HABITS.length}`);
 }
