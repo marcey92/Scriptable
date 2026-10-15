@@ -412,8 +412,8 @@ async function runInner(file, opts) {
     "every row fits the grid: no stretchy gaps between sections": ({ widget }) => widget.children.filter(c => c.spacer === "flex").length === 1 && widget.children[widget.children.length - 1].spacer === "flex",
     "habit rows are drawn": ({ text }) => /^Anki/m.test(text) && /^Gratitude/m.test(text),
     "calendar rows are drawn": ({ text }) => text.includes("Late dinner"),
-    "now rows are drawn": ({ text }) => text.includes("★ Parcel"),
-    "habit rows: name, 12 boxes, count": ({ text }) => /^Anki(\s+[□■]){12}\s+\d\d$/m.test(text),
+    "now rows are drawn": ({ text }) => /★\s+Parcel/.test(text),
+    "habit rows: name, 12 boxes, count without a leading zero": ({ text }) => /^Anki(\s+[□■]){12}\s+[1-9]\d?$/m.test(text) || /^Anki(\s+[□■]){12}\s+0$/m.test(text),
   }, note: "contents" });
   await run("overview.js", { ...widgetOpts, family: "large", events: [], expect: {
     "tapping the calendar opens Calendar, tapping the Inbox opens Mail": ({ widget }) => {
@@ -469,6 +469,17 @@ async function runInner(file, opts) {
       "a day with only an all-day event still shows": ({ text }) => /^[A-Z]{3}\s+—\s+Packing day$/m.test(text),
     }, note: "all-day events" });
   }
+  files["/docs/swiss-overview-hidden-calendars.json"] = JSON.stringify(["you@gmail.com"]);
+  await run("overview.js", { ...widgetOpts, family: "large", expect: {
+    "a hidden calendar's events are left out": ({ text }) => !text.includes("Psychoanalysis") && text.includes("Late dinner"),
+    "stars hang in their own column, so senders line up": ({ widget }) => {
+      const rows = []; const walk = n => { if (n.children) { if (n.size && n.size.height === 15 && n.children.length === 5) rows.push(n); n.children.forEach(walk); } };
+      walk(widget);
+      const starred = rows.filter(r => r.children[2].children.some(t => t.text === "★"));
+      return rows.length > 0 && starred.length > 0 && rows.every(r => r.children[3].size.width === rows[0].children[3].size.width);
+    },
+  }, note: "hidden calendar, stars" });
+  delete files["/docs/swiss-overview-hidden-calendars.json"];
   await run("overview.js", { ...widgetOpts, inApp: true, note: "preview" });
   await run("overview.js", { ...widgetOpts, inApp: true, query: { menu: "1" }, expect: {
     "tapping the Habits header opens the menu": ({ alerts, widget }) => alerts === 1 && !widget,

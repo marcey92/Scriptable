@@ -222,6 +222,9 @@ function drawRows(w, innerW, rows, data, small = false, empty = "Nothing going o
   });
 }
 
+// the star hangs in its own narrow column, so every sender starts at the same edge
+const STAR_W = 14;
+
 // the Inbox as timetable rows for the overview: day | time | sender | detail. The weekday names an item
 // within the last 6 days, shown only when it changes; older items show their date in the time column.
 function timetableRows(data, n) {
@@ -234,7 +237,8 @@ function timetableRows(data, n) {
     rows.push({
       day: recent && dayKey !== prevDay ? S.WD[d.getDay()].slice(0, 3).toUpperCase() : "",
       time: !it.when ? "" : recent ? S.timeLabel(d) : `${S.p(d.getDate())}.${S.p(d.getMonth() + 1)}`,
-      who: (it.star ? "★ " : "") + it.name,
+      star: it.star,
+      who: it.name,
       what: it.long,
     });
     prevDay = dayKey;
@@ -250,7 +254,7 @@ function drawTimetable(w, W, data, n) {
   if (!rows.length) { S.gRow(w, W, [{ text: "", w: S.G.KEY }, { text: data.noData ? "No data" : "Nothing going on" }]); return; }
   for (const r of rows) {
     S.gRow(w, W, [{ text: r.day, w: S.G.D, font: S.F.key }, { text: r.time, w: S.G.T, font: S.F.mono },
-      { text: r.who, w: S.G.W1, font: S.F.key }, { text: r.what }]);
+      { text: r.star ? "★" : "", w: STAR_W, font: S.F.key }, { text: r.who, w: S.G.W1 - STAR_W, font: S.F.key }, { text: r.what }]);
   }
 }
 

@@ -59,7 +59,15 @@ if (!config.runsInWidget && tapped && H.HABITS.includes(tapped)) {
   // the first run in the app asks for calendar access and, if missing, the feed's read token
   const token = await N.token();
   await C.syncFromFeed(token);         // add any events Hermes pushed before reading the calendar
-  const cal = await C.loadDays([], true, LOOK_AHEAD);   // all-day events too: they go in the day headings
+  // run inside the app (not from a widget tap): preview, or choose which calendars to show
+  if (!config.runsInWidget) {
+    const a = new Alert();
+    a.addAction("Preview widget");
+    a.addAction("Calendars…");
+    a.addCancelAction("Cancel");
+    if ((await a.presentSheet()) === 1) await C.chooseCalendars();
+  }
+  const cal = await C.loadDays([], true, LOOK_AHEAD, C.hiddenCalendars());
   const habits = await H.load();
   const now = await N.load(token);
   const family = config.widgetFamily;
