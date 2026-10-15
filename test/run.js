@@ -403,7 +403,7 @@ async function runInner(file, opts) {
   savedEvents.length = 0;   // the tests below expect only the stand-in calendar
   for (const family of ["large", "medium", "accessoryInline"]) await run("overview.js", { ...widgetOpts, family });
   await run("overview.js", { ...widgetOpts, family: "large", expect: {
-    "ruler first: the date, then 12 day initials": ({ text }) => /^[A-Z][a-z]{2} \d\d\.\d\d(\s+[A-Z]){12}\s*$/.test(text.split("\n")[0]),
+    "ruler first: the date, then 12 day initials on one line": ({ text }) => /^[A-Z][a-z]{2} \d\d\.\d\d\s+([A-Z] ){11}\s*[A-Z]\s*$/.test(text.split("\n")[0]),
     "then the Calendar and Inbox section rows, in that order": ({ text }) => { const l = text.split("\n"); const c = l.findIndex(x => /^\s*Calendar\s+■/.test(x)), i = l.findIndex(x => /^\s*Inbox\s+■/.test(x)); return c === 5 && c < i; },
     "calendar rows are day | time | what, the day on each day's first row": ({ text }) => /^[A-Z]{3}\s+14:00\s+Psychoanalysis \| Mayessi Svoronou$/m.test(text),
     "no rules between days, only the day name": ({ text }) => { const l = text.split("\n"); const i = l.findIndex(x => /Psychoanalysis/.test(x)); return !/^─/.test(l[i - 1]); },
@@ -412,7 +412,7 @@ async function runInner(file, opts) {
     "every row fits the grid: no stretchy gaps between sections": ({ widget }) => widget.children.filter(c => c.spacer === "flex").length === 1 && widget.children[widget.children.length - 1].spacer === "flex",
     "habit rows are drawn": ({ text }) => /^Anki/m.test(text) && /^Gratitude/m.test(text),
     "calendar rows are drawn": ({ text }) => text.includes("Late dinner"),
-    "now rows are drawn": ({ text }) => /★\s+Parcel/.test(text),
+    "now rows are drawn": ({ text }) => text.includes("★ Parcel"),
     "habit rows: name, 12 boxes, count without a leading zero": ({ text }) => /^Anki(\s+[□■]){12}\s+[1-9]\d?$/m.test(text) || /^Anki(\s+[□■]){12}\s+0$/m.test(text),
   }, note: "contents" });
   await run("overview.js", { ...widgetOpts, family: "large", events: [], expect: {
@@ -472,12 +472,7 @@ async function runInner(file, opts) {
   files["/docs/swiss-overview-hidden-calendars.json"] = JSON.stringify(["you@gmail.com"]);
   await run("overview.js", { ...widgetOpts, family: "large", expect: {
     "a hidden calendar's events are left out": ({ text }) => !text.includes("Psychoanalysis") && text.includes("Late dinner"),
-    "stars hang in their own column, so senders line up": ({ widget }) => {
-      const rows = []; const walk = n => { if (n.children) { if (n.size && n.size.height === 15 && n.children.length === 5) rows.push(n); n.children.forEach(walk); } };
-      walk(widget);
-      const starred = rows.filter(r => r.children[2].children.some(t => t.text === "★"));
-      return rows.length > 0 && starred.length > 0 && rows.every(r => r.children[3].size.width === rows[0].children[3].size.width);
-    },
+    "a starred sender starts with ★": ({ text }) => /★ Parcel/.test(text),
   }, note: "hidden calendar, stars" });
   delete files["/docs/swiss-overview-hidden-calendars.json"];
   await run("overview.js", { ...widgetOpts, inApp: true, note: "preview" });

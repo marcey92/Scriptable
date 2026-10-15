@@ -138,16 +138,16 @@ function drawGrid(w, W, data, runURL) {
   const ruler = w.addStack(); ruler.size = new Size(W, S.M); ruler.centerAlignContent(); ruler.spacing = 0;
   ruler.url = `${runURL}?menu=1`;
   S.gCell(ruler, { text: S.dateLabel(), w: S.G.KEY, font: S.F.key }, S.M);
-  // initials in the monospaced font, each alone in a 12 pt slot exactly over its box (a fixed-size stack
-  // centres its content), then the fixed 3 pt gap. No flexible spacers: iOS gives each one a minimum
-  // width of about 8 pt, which left no room for the letter.
-  days.forEach((d, i) => {
-    const today = i === days.length - 1;
-    const c = ruler.addStack(); c.size = new Size(GRID_BOX, S.M); c.centerAlignContent();
-    const t = c.addText(S.WD[d.getDay()][0]); t.lineLimit = 1;
-    t.font = today ? S.F.monoKey : S.F.mono; t.textColor = S.FG;
-    ruler.addSpacer(S.M - GRID_BOX);
-  });
+  // the initials as one line of text, not one tiny cell each (text in cells narrower than ~15 pt gets
+  // clipped on the phone). A monospaced font at 12.5 pt advances 7.5 pt per character, so a letter plus a
+  // space is exactly one 15 pt slot; 2 pt in, each letter sits over the centre of its 12 pt box.
+  const letters = ruler.addStack(); letters.size = new Size(GRID_DAYS * S.M, S.M); letters.centerAlignContent();
+  letters.addSpacer(2);
+  const past = letters.addText(days.slice(0, -1).map(d => S.WD[d.getDay()][0] + " ").join(""));
+  past.font = Font.regularMonospacedSystemFont(12.5); past.textColor = S.FG; past.lineLimit = 1;
+  const today = letters.addText(S.WD[days[days.length - 1].getDay()][0]);
+  today.font = Font.boldMonospacedSystemFont(12.5); today.textColor = S.FG; today.lineLimit = 1;
+  letters.addSpacer();
   S.gCell(ruler, { text: "", w: countW }, S.M);
 
   for (const h of HABITS) {
