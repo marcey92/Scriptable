@@ -292,9 +292,9 @@ async function runInner(file, opts) {
     important: { important: [{ id: "old", from: "Council", subject: "Old but important", received: iso(72), urgent: false }] } };
   const savedCache = files["/docs/swiss-orders.json"];
   await run("orders.js", { token: "tok", feeds: busy, family: "medium", expect: {
-    "an old starred item too old to fit takes the bottom row": ({ text }) => /★ Council/.test(text.split("\n").pop()),
-    "the rest are the newest, in order": ({ text }) => /Shop1[\s\S]*Shop2[\s\S]*Shop3[\s\S]*Shop4/.test(text) && !text.includes("Shop5"),
-  }, note: "old star kept" });
+    "an old starred item that doesn't fit is left off: no place is held for stars": ({ text }) => !text.includes("Council"),
+    "the list is simply the newest, in order": ({ text }) => /Shop1[\s\S]*Shop2[\s\S]*Shop3[\s\S]*Shop4[\s\S]*Shop5/.test(text),
+  }, note: "old star not kept" });
   files["/docs/swiss-orders.json"] = savedCache;   // the offline tests below read the earlier cache
   await run("orders.js", { ...widgetOpts, family: "medium", offline: true, expect: {
     "offline shows the cached list; recent data is not stale": ({ text }) => !text.includes("Stale") && text.includes("Zalando"),
@@ -333,7 +333,7 @@ async function runInner(file, opts) {
       const titleWs = new Set(rows.map(r => r.children[1].size.width));
       return rows.length === 5 && titleWs.size === 1 && rows.every(r => r.children[2].children[0].text !== undefined);
     },
-    "a starred item below the fold takes the bottom row": ({ text }) => /★ Council/.test(text.split("\n").pop()),
+    "a starred item below the fold is left off, like any other": ({ text }) => !text.includes("Council"),
   }, note: "now feed" });
   await run("orders.js", { token: "tok", feeds: nowFeed, family: "small", expect: {
     "short replaces detail on small": ({ text }) => /Amazon\s+Today/.test(text),

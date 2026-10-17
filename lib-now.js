@@ -156,16 +156,9 @@ function items(data) {
   return out.sort((a, b) => b.when - a.when);
 }
 
-// the first `n` items, except that a starred item never drops off: any that are too far down to fit
-// replace the last unstarred ones at the bottom (so the order is kept)
+// the first `n` items, in the feed's order (newest first). Stars mark items; they don't hold a place.
 function pick(list, n) {
-  const top = list.slice(0, n);
-  const missing = list.slice(n).filter(it => it.star);
-  if (!missing.length) return top;
-  const keep = Math.max(0, n - missing.length);
-  const plain = top.filter(it => !it.star);
-  const drop = new Set(plain.slice(Math.max(0, plain.length - (n - keep))));
-  return [...top.filter(it => !drop.has(it)), ...missing].slice(0, n);
+  return list.slice(0, n);
 }
 
 // right-hand header text: nothing, unless Hermes hasn't updated the feed for a while
