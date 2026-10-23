@@ -29,6 +29,8 @@ Every widget starts with `importModule("swiss")`. Colours, type sizes, margins, 
 
 The habit list is `HABITS` at the top of `lib-habits.js`; the habit widget and the overview both follow it.
 
+Missed a day? Open the habit menu (tap the habit widget's header or the overview's date row, or run `habit-grid.js` in the app), pick "Earlier days…", choose a day from the last 13 (each shows how many habits it has, e.g. `3/4`) and tap habits to tick or untick them.
+
 After that, run `update.js` to pull changes from GitHub. For a private repo, put a read-only token in `TOKEN` at the top of `update.js` on your phone (never commit it).
 
 ## Orders widget

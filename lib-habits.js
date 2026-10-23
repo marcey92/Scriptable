@@ -40,9 +40,10 @@ function lastDays(n) {
 }
 
 // ---- ticking ----
-function toggle(data, h) {
-  const today = key(habitNow()), list = data[h] || [];
-  data[h] = list.includes(today) ? list.filter(x => x !== today) : [...list, today];
+// `d` defaults to today; the menu's "Earlier days…" passes a past day
+function toggle(data, h, d = habitNow()) {
+  const k = key(d), list = data[h] || [];
+  data[h] = list.includes(k) ? list.filter(x => x !== k) : [...list, k];
   save(data);
 }
 function isDone(data, h, d) { return (data[h] || []).includes(key(d)); }
@@ -62,18 +63,42 @@ async function nextEvent() {
 
 // ---- tick-off menu (tap the header, or run the script in the app) ----
 // `extras`: further lines under the habits, [{ label, run }] (the overview adds "Calendars…")
+const EARLIER_DAYS = 13;   // how far back "Earlier days…" reaches (the overview's grid shows 13 days)
 async function menu(data, extras = []) {
-  const today = habitNow();
+  await dayMenu(data, habitNow(), "Today's habits",
+    [{ label: "Earlier days…", run: () => earlierMenu(data) }, ...extras], "Done");
+}
+
+// one day's habits: tap a habit to tick or untick it on that day
+async function dayMenu(data, d, title, extras = [], cancel = "Back") {
   while (true) {
     const a = new Alert();
-    a.title = "Today's habits";
-    for (const h of HABITS) a.addAction((isDone(data, h, today) ? "✓ " : "") + h);
+    a.title = title;
+    for (const h of HABITS) a.addAction((isDone(data, h, d) ? "✓ " : "") + h);
     for (const x of extras) a.addAction(x.label);
-    a.addCancelAction("Done");
+    a.addCancelAction(cancel);
     const i = await a.presentSheet();
     if (i === -1) break;
     if (i >= HABITS.length) { await extras[i - HABITS.length].run(); continue; }
-    toggle(data, HABITS[i]);
+    toggle(data, HABITS[i], d);
+  }
+}
+
+// pick a past day (yesterday first), then tick its habits; for days missed on the widget
+async function earlierMenu(data) {
+  const days = lastDays(EARLIER_DAYS + 1).slice(0, -1).reverse();
+  while (true) {
+    const a = new Alert();
+    a.title = "Earlier days";
+    const labels = days.map((d, i) => i === 0 ? `Yesterday ${S.dayMonth(d)}` : S.dateLabel(d));
+    days.forEach((d, i) => {
+      const done = HABITS.filter(h => isDone(data, h, d)).length;
+      a.addAction(`${labels[i]}  ${done}/${HABITS.length}`);
+    });
+    a.addCancelAction("Back");
+    const i = await a.presentSheet();
+    if (i === -1) break;
+    await dayMenu(data, days[i], `Habits on ${labels[i]}`);
   }
 }
 
