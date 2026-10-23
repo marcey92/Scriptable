@@ -102,6 +102,24 @@ async function earlierMenu(data) {
   }
 }
 
+// one habit's last days, today first: tap a day to tick or untick it (tapping a habit's name on a widget)
+async function habitDays(data, h) {
+  const days = lastDays(EARLIER_DAYS + 1).reverse();
+  while (true) {
+    const a = new Alert();
+    a.title = h;
+    a.message = "Tap a day to tick or untick it";
+    days.forEach((d, i) => {
+      const label = i === 0 ? "Today" : i === 1 ? `Yesterday ${S.dayMonth(d)}` : S.dateLabel(d);
+      a.addAction((isDone(data, h, d) ? "✓ " : "") + label);
+    });
+    a.addCancelAction("Done");
+    const i = await a.presentSheet();
+    if (i === -1) break;
+    toggle(data, h, days[i]);
+  }
+}
+
 // ---- Home Screen widget ----
 function buildWidget(data, eventTitle) {
   const w = S.widget();
@@ -121,6 +139,7 @@ function buildWidget(data, eventTitle) {
 
 // one row per habit: name, a box per day (today on the right), count. Tapping a row opens
 // `runURL?habit=<name>`, and the script behind runURL ticks it (also used by the overview widget).
+// Tapping the name opens `runURL?days=<name>`: that habit's last days, to fix a missed one.
 function drawRows(w, innerW, cell, data, runURL) {
   const gap = S.BOX_GAP;
   // the row puts `gap` between every child, spacers included: name, boxes, spacer, count. The width
@@ -136,6 +155,7 @@ function drawRows(w, innerW, cell, data, runURL) {
     row.url = `${runURL}?habit=${encodeURIComponent(h)}`;
 
     const n = row.addStack(); n.size = new Size(NAME_W, cell); n.centerAlignContent();
+    n.url = `${runURL}?days=${encodeURIComponent(h)}`;
     const t = n.addText(h); t.lineLimit = 1;
     t.font = Font.mediumSystemFont(textSize); t.textColor = S.FG;
     n.addSpacer();
@@ -182,7 +202,7 @@ function drawGrid(w, W, data, runURL) {
   for (const h of HABITS) {
     const row = w.addStack(); row.size = new Size(W, S.M); row.centerAlignContent(); row.spacing = 0;
     row.url = `${runURL}?habit=${encodeURIComponent(h)}`;
-    S.gCell(row, { text: h, w: S.G.KEY }, S.M);
+    S.gCell(row, { text: h, w: S.G.KEY }, S.M).url = `${runURL}?days=${encodeURIComponent(h)}`;   // the name: its days
     let done = 0;
     for (const d of days) {
       const on = isDone(data, h, d); if (on) done++;
@@ -249,4 +269,4 @@ function buildLockInline(data) {
   return S.lockInline(`${TITLE} ${done}/${HABITS.length}`);
 }
 
-module.exports = { drawGrid, HABITS, load, toggle, menu, nextEvent, drawRows, buildWidget, buildLockRect, buildLockCircle, buildLockInline };
+module.exports = { drawGrid, HABITS, load, toggle, menu, habitDays, nextEvent, drawRows, buildWidget, buildLockRect, buildLockCircle, buildLockInline };

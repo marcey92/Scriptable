@@ -232,6 +232,22 @@ async function runInner(file, opts) {
     } });
     files["/docs/habit-grid.json"] = saved;
   }
+  {
+    // tapping a habit's name → its days, today first → tap the third (two days ago) → Done
+    const d = new Date(Date.now() - 4 * 3600 * 1000); d.setDate(d.getDate() - 2);
+    const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const saved = files["/docs/habit-grid.json"];
+    for (const file of ["habit-grid.js", "overview.js"]) {
+      await run(file, { inApp: true, query: { days: "Gratitude" }, sheets: [2], token: "tok", note: "tap a name, fix two days ago", expect: {
+        "Gratitude is ticked for two days ago only": ({ files }) => JSON.stringify(JSON.parse(files["/docs/habit-grid.json"]).Gratitude) === JSON.stringify([k]),
+      } });
+      files["/docs/habit-grid.json"] = saved;
+    }
+    const urls = n => [n.url, ...(n.children || []).flatMap(urls)].filter(Boolean);
+    await run("habit-grid.js", { family: "medium", note: "name links", expect: {
+      "each habit's name opens its days": ({ widget }) => urls(widget).includes("scriptable:///run/x?days=Cold%20shower"),
+    } });
+  }
   await run("habit-grid.js", { family: "medium", note: "after one-tap" });
   for (const family of [...home, "accessoryRectangular", "accessoryInline"]) await run("calendar-list.js", { family });
   await run("calendar-list.js", { family: "medium", param: "Google: you@gmail.com", note: "Google parameter" });
