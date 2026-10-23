@@ -11,7 +11,7 @@ const N = importModule("lib-now");
 //   Inbox       ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //   WED  11:12  ★ Homes & Villas  €900 claim...  <- day | time | sender | detail, at most INBOX_MAX
 // Each part is drawn by the same libraries as its own widget (lib-habits, lib-calendar, lib-now).
-// Tapping a habit row ticks it for today, tapping the ruler opens the habit menu (with "Calendars…" to
+// Tapping a habit row ticks it for today, tapping a habit's name lists its last days to fix a missed one, tapping the ruler opens the habit menu (with "Calendars…" to
 // choose which calendars to show), tapping the calendar
 // opens Calendar and tapping the Inbox opens Mail.
 const CALENDAR_URL = "calshow://";
@@ -54,6 +54,9 @@ const tapped = query.habit;
 if (!config.runsInWidget && tapped && H.HABITS.includes(tapped)) {
   H.toggle(await H.load(), tapped);     // one-tap from a habit row
   try { App.close(); } catch (e) {}     // drop back to the Home Screen
+} else if (!config.runsInWidget && query.days && H.HABITS.includes(query.days)) {
+  await H.habitDays(await H.load(), query.days);   // tapped a habit's name: fix earlier days
+  try { App.close(); } catch (e) {}
 } else if (!config.runsInWidget && query.menu) {
   // tapped the date row: tick habits, or choose which calendars the overview shows
   await H.menu(await H.load(), [{ label: "Calendars…", run: C.chooseCalendars }]);

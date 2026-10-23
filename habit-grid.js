@@ -1,11 +1,12 @@
 const S = importModule("swiss");
 const H = importModule("lib-habits");
 
-// One row of boxes per habit; tap a row to tick today. The habits and drawing live in lib-habits.js.
+// One row of boxes per habit; tap a row to tick today, tap a habit's name to change earlier days. The habits and drawing live in lib-habits.js.
 
 // ---- run ----
 const data = await H.load();
-const tapped = (args.queryParameters || {}).habit;
+const query = args.queryParameters || {};
+const tapped = query.habit;
 
 if (config.runsInWidget) {
   const f = config.widgetFamily;
@@ -18,6 +19,9 @@ if (config.runsInWidget) {
 } else if (tapped && H.HABITS.includes(tapped)) {
   H.toggle(data, tapped);                 // one-tap from a widget row
   try { App.close(); } catch (e) {}     // drop back to the Home Screen
+} else if (query.days && H.HABITS.includes(query.days)) {
+  await H.habitDays(data, query.days);    // tapped a habit's name: fix earlier days
+  try { App.close(); } catch (e) {}
 } else {
   await H.nextEvent();                    // first run in the app triggers the calendar permission prompt
   await H.menu(data);

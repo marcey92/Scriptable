@@ -4,7 +4,7 @@ Scriptable widgets for iOS in one fixed style: a title, a hairline rule, then ro
 
 | Script | What it shows | Sizes |
 | --- | --- | --- |
-| `habit-grid.js` | One row of boxes per habit; tap a row to tick today | Medium, large, Lock Screen |
+| `habit-grid.js` | One row of boxes per habit; tap a row to tick today, tap a name to fix earlier days | Medium, large, Lock Screen |
 | `calendar-list.js` | The next days that have events | Small, medium, large, Lock Screen |
 | `battery.js` | Charge as a figure and a bar of boxes | Small, medium, Lock Screen |
 | `weather.js` | Hours, temperature, conditions, rain chance | Small, medium, large, Lock Screen |
@@ -28,6 +28,8 @@ Every widget starts with `importModule("swiss")`. Colours, type sizes, margins, 
 4. For `habit-grid.js` and `overview.js`, set the widget's "When Interacting" to "Run Script".
 
 The habit list is `HABITS` at the top of `lib-habits.js`; the habit widget and the overview both follow it.
+
+Missed a day? Tap the habit's **name** on the habit widget or the overview. A list opens with that habit's last two weeks (Today, Yesterday, Wed 21.10, …), ✓ on the ticked ones; tap a day to tick or untick it, then Done. Tapping the boxes still ticks today. The habit menu also has "Earlier days…" to go day by day instead.
 
 After that, run `update.js` to pull changes from GitHub. For a private repo, put a read-only token in `TOKEN` at the top of `update.js` on your phone (never commit it).
 

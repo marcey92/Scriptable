@@ -118,7 +118,7 @@ async function runInner(file, opts) {
     },
     Alert: class {
       addAction() {} addCancelAction() {} addSecureTextField() {} textFieldValue() { return opts.typedToken || ""; }
-      async presentSheet() { alerts++; return -1; } async present() { alerts++; return 0; }
+      async presentSheet() { alerts++; return opts.sheets && opts.sheets.length ? opts.sheets.shift() : -1; } async present() { alerts++; return 0; }   // sheets: scripted taps, then "Done"
     },
     FileManager: (() => {
       const fm = {
@@ -218,6 +218,35 @@ async function runInner(file, opts) {
       "a tick at 01:30 counts for the day before (the habit day turns over at 4am)": ({ files }) => JSON.parse(files["/docs/habit-grid.json"]).Gratitude.includes(day(before)),
     }, note: "tick at 01:30" });
     files["/docs/habit-grid.json"] = JSON.stringify({ Anki: [new Date().toISOString().slice(0, 10)] });
+  }
+  {
+    // menu → "Earlier days…" (after the 4 habits) → the day before yesterday → tick Meditate → back out
+    const d = new Date(Date.now() - 4 * 3600 * 1000); d.setDate(d.getDate() - 2);
+    const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const saved = files["/docs/habit-grid.json"];
+    await run("habit-grid.js", { inApp: true, sheets: [4, 1, 2], note: "tick an earlier day", expect: {
+      "Meditate is ticked for two days ago, and nothing else changes": ({ files }) => {
+        const data = JSON.parse(files["/docs/habit-grid.json"]);
+        return JSON.stringify(data.Meditate) === JSON.stringify([...(JSON.parse(saved).Meditate || []), k]) && JSON.stringify(data.Anki) === JSON.stringify(JSON.parse(saved).Anki);
+      },
+    } });
+    files["/docs/habit-grid.json"] = saved;
+  }
+  {
+    // tapping a habit's name → its days, today first → tap the third (two days ago) → Done
+    const d = new Date(Date.now() - 4 * 3600 * 1000); d.setDate(d.getDate() - 2);
+    const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const saved = files["/docs/habit-grid.json"];
+    for (const file of ["habit-grid.js", "overview.js"]) {
+      await run(file, { inApp: true, query: { days: "Gratitude" }, sheets: [2], token: "tok", note: "tap a name, fix two days ago", expect: {
+        "Gratitude is ticked for two days ago only": ({ files }) => JSON.stringify(JSON.parse(files["/docs/habit-grid.json"]).Gratitude) === JSON.stringify([k]),
+      } });
+      files["/docs/habit-grid.json"] = saved;
+    }
+    const urls = n => [n.url, ...(n.children || []).flatMap(urls)].filter(Boolean);
+    await run("habit-grid.js", { family: "medium", note: "name links", expect: {
+      "each habit's name opens its days": ({ widget }) => urls(widget).includes("scriptable:///run/x?days=Cold%20shower"),
+    } });
   }
   await run("habit-grid.js", { family: "medium", note: "after one-tap" });
   for (const family of [...home, "accessoryRectangular", "accessoryInline"]) await run("calendar-list.js", { family });
