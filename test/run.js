@@ -451,13 +451,13 @@ async function runInner(file, opts) {
     await run(file, { ...widgetOpts, family: "medium", screen: { width: 1100, height: 800 }, expect: {
       "nothing wider than a narrow widget": ({ widget }) => widest(widget) <= 292,
     }, note: "unknown screen 1100x800" });
-  // the iPhone Duo's inner screen (1000 x 703) is in the tables: its widgets get their real size
+  // the iPhone Duo's inner screen (Scriptable reports 466 x 678) is in the tables: its widgets get their real size
   for (const file of ["weather.js", "calendar-list.js", "hermes.js", "habit-grid.js", "battery.js"])
-    await run(file, { ...widgetOpts, family: "medium", screen: { width: 1000, height: 703 }, expect: {
-      "on the Duo, rows use the widget's width but no more": ({ widget }) => widest(widget) <= 349 - 28 && widest(widget) > 292,
+    await run(file, { ...widgetOpts, family: "medium", screen: { width: 678, height: 466 }, expect: {
+      "on the Duo, rows use the widget's width but no more": ({ widget }) => widest(widget) <= 332 - 28 && widest(widget) > 263,
     }, note: "iPhone Duo" });
-  await run("overview.js", { ...widgetOpts, family: "large", screen: { width: 1000, height: 703 }, expect: {
-    "on the Duo the overview gets 13 days and the full width": ({ text, widget }) => /^[A-Z][a-z]{2} \d\d\.\d\d\s+([A-Z] ){12}[A-Z]\s*$/.test(text.split("\n")[0]) && widget.children[0].size.width === 349 - 29,
+  await run("overview.js", { ...widgetOpts, family: "large", screen: { width: 678, height: 466 }, expect: {
+    "on the Duo the overview gets 13 days and the full width": ({ text, widget }) => /^[A-Z][a-z]{2} \d\d\.\d\d\s+([A-Z] ){12}[A-Z]\s*$/.test(text.split("\n")[0]) && widget.children[0].size.width === 332 - 29,
   }, note: "iPhone Duo" });
   // a screen missing from the size table (the iPhone Duo's inner one) falls back to the narrowest width
   for (const screen of [{ width: 1100, height: 800 }, { width: 800, height: 1100 }, { width: 320, height: 568 }])
