@@ -43,6 +43,7 @@ S.WIDGET_H = {
   "430x932": [170, 382], "428x926": [170, 382], "414x896": [169, 379], "414x736": [159, 357],
   "402x874": [158, 354], "393x852": [158, 354], "390x844": [158, 354],
   "375x812": [155, 345], "360x780": [155, 345], "375x667": [148, 324], "320x568": [141, 311],
+  "703x1000": [163, 370],   // iPhone Duo, inner screen: measured from a screenshot (2x), 350 x 163 / 349 x 370
 };
 
 // sizes for the slot the widget sits in; `as` overrides the family (the in-app preview has none)
@@ -55,7 +56,10 @@ S.metrics = (as) => {
   const k = `${Math.min(s.width, s.height)}x${Math.max(s.width, s.height)}`;
   // the width follows the screen only on known iPhones: on a bigger screen (an iPhone Duo's inner one)
   // screen minus margins is far wider than the widget, and every row was cut off at both edges
-  const innerW = small ? 130 : S.WIDGET_H[k] ? Math.max(260, Math.min(s.width, s.height) - 56 - 28) : 260;
+  // and never wider than the widget itself where its width is known (on the Duo the screen is far wider)
+  const fromScreen = Math.max(260, Math.min(s.width, s.height) - 56 - 28);
+  const innerW = small ? 130 : !S.WIDGET_H[k] ? 260
+    : S.WIDGET_W[k] ? Math.min(fromScreen, S.WIDGET_W[k] - S.PAD[1] - S.PAD[3]) : fromScreen;
   const [h, hLarge] = S.WIDGET_H[k] || [149, 344];
   const availH = (large ? hLarge : h) - S.PAD[0] - S.PAD[2];
   return { family, large, small, lock, innerW, availH };
@@ -79,6 +83,7 @@ S.F = {
 S.WIDGET_W = {
   "430x932": 364, "428x926": 364, "414x896": 360, "414x736": 348, "402x874": 338, "393x852": 338,
   "390x844": 338, "375x812": 329, "360x780": 329, "375x667": 321, "320x568": 292,
+  "703x1000": 349,   // iPhone Duo, inner screen
 };
 // the grid for a slot: W = content width, H = content height, rows = whole 15 pt rows that fit
 S.grid = (as) => {
