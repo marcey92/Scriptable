@@ -176,17 +176,20 @@ function drawRows(w, innerW, cell, data, runURL) {
 // A ruler row (the date in the key column, then each day's initial over its column, today in semibold;
 // tapping it opens the menu), then one row per habit: name | a box per day | count of the days shown.
 // Each day is one 15 pt slot: a 12 pt box (or the initial) at its left, then the 3 pt gap.
-const GRID_DAYS = 13, GRID_BOX = 12;
+// On a screen missing from S.WIDGET_W the width falls back to the narrowest, where 13 days don't fit
+// (an iPhone Duo's inner screen drew "Invalid canvas size: -22 by 15"): show fewer days, keep the count.
+const GRID_DAYS = 13, GRID_BOX = 12, COUNT_MIN = S.M;   // a mini (300 pt) leaves exactly 15 pt: still 13 days
 function drawGrid(w, W, data, runURL) {
-  const days = lastDays(GRID_DAYS);
-  const countW = W - S.G.KEY - GRID_DAYS * S.M;
+  const nDays = Math.max(1, Math.min(GRID_DAYS, Math.floor((W - S.G.KEY - COUNT_MIN) / S.M)));
+  const days = lastDays(nDays);
+  const countW = W - S.G.KEY - nDays * S.M;
   const ruler = w.addStack(); ruler.size = new Size(W, S.M); ruler.centerAlignContent(); ruler.spacing = 0;
   ruler.url = `${runURL}?menu=1`;
   S.gSign(ruler, S.dateLabel());   // the date as the habit band's sign, like Calendar and Inbox below
   // the initials are drawn into a picture, each centred over its box at exactly 15 pt spacing: laid out
   // as text they either clipped (narrow cells) or drifted (the font's real width differs on the phone)
   const ctx = new DrawContext();
-  ctx.size = new Size(GRID_DAYS * S.M, S.M);
+  ctx.size = new Size(nDays * S.M, S.M);
   ctx.opaque = false;
   ctx.respectScreenScale = true;
   ctx.setTextAlignedCenter();
@@ -196,7 +199,7 @@ function drawGrid(w, W, data, runURL) {
     ctx.drawTextInRect(S.WD[d.getDay()][0], new Rect(i * S.M, 1, GRID_BOX, S.M - 1));
   });
   const img = ruler.addImage(ctx.getImage());
-  img.imageSize = new Size(GRID_DAYS * S.M, S.M);
+  img.imageSize = new Size(nDays * S.M, S.M);
   S.gCell(ruler, { text: "", w: countW }, S.M);
 
   for (const h of HABITS) {
