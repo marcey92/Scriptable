@@ -43,7 +43,7 @@ S.WIDGET_H = {
   "430x932": [170, 382], "428x926": [170, 382], "414x896": [169, 379], "414x736": [159, 357],
   "402x874": [158, 354], "393x852": [158, 354], "390x844": [158, 354],
   "375x812": [155, 345], "360x780": [155, 345], "375x667": [148, 324], "320x568": [141, 311],
-  "703x1000": [163, 370],   // iPhone Duo, inner screen: measured from a screenshot (2x), 350 x 163 / 349 x 370
+  "466x678": [155, 352],   // iPhone Duo, inner screen (Scriptable reports 466 x 678): measured from screenshots
 };
 
 // sizes for the slot the widget sits in; `as` overrides the family (the in-app preview has none)
@@ -83,7 +83,7 @@ S.F = {
 S.WIDGET_W = {
   "430x932": 364, "428x926": 364, "414x896": 360, "414x736": 348, "402x874": 338, "393x852": 338,
   "390x844": 338, "375x812": 329, "360x780": 329, "375x667": 321, "320x568": 292,
-  "703x1000": 349,   // iPhone Duo, inner screen
+  "466x678": 332,   // iPhone Duo, inner screen
 };
 // the grid for a slot: W = content width, H = content height, rows = whole 15 pt rows that fit
 S.grid = (as) => {
