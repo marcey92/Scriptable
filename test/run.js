@@ -99,12 +99,15 @@ async function runInner(file, opts) {
         if (r.x < 0 || r.x + r.width > this.size.width) throw new Error(`text at ${r.x} is outside the ${this.size.width} pt picture`);
         this.drawn.push(t); (this.rects = this.rects || []).push(r);
       }
-      getImage() { return { drawn: this.drawn, rects: this.rects, size: this.size }; }
+      getImage() {
+        if (!(this.size.width > 0 && this.size.height > 0)) throw new Error(`Invalid canvas size: ${this.size.width} by ${this.size.height}`);
+        return { drawn: this.drawn, rects: this.rects, size: this.size };
+      }
     },
     Font: new Proxy({}, { get: (_, name) => size => ({ name, size }) }),
     ListWidget,
     Device: {
-      screenSize: () => ({ width: 393, height: 852 }),
+      screenSize: () => opts.screen || ({ width: 393, height: 852 }),
       batteryLevel: () => (opts.battery === undefined ? 0.72 : opts.battery),
       isCharging: () => !!opts.charging, isFullyCharged: () => false,
     },
@@ -442,6 +445,17 @@ async function runInner(file, opts) {
   }, note: "offline is fine" });
   savedEvents.length = 0;   // the tests below expect only the stand-in calendar
   for (const family of ["large", "medium", "accessoryInline"]) await run("overview.js", { ...widgetOpts, family });
+  // ... and the list widgets must not size anything wider than the narrowest widget either
+  const widest = (n) => Math.max(n.size ? n.size.width : 0, ...(n.children || []).map(widest));
+  for (const file of ["weather.js", "calendar-list.js", "hermes.js", "habit-grid.js", "battery.js"])
+    await run(file, { ...widgetOpts, family: "medium", screen: { width: 1000, height: 703 }, expect: {
+      "nothing wider than a narrow widget": ({ widget }) => widest(widget) <= 292,
+    }, note: "unknown screen 1000x703" });
+  // a screen missing from the size table (the iPhone Duo's inner one) falls back to the narrowest width
+  for (const screen of [{ width: 1000, height: 703 }, { width: 703, height: 1000 }, { width: 320, height: 568 }])
+    await run("overview.js", { ...widgetOpts, family: "large", screen, expect: {
+      "fewer days rather than a negative count column": ({ text }) => /^[A-Z][a-z]{2} \d\d\.\d\d\s+([A-Z] ){4,12}[A-Z]\s*$/.test(text.split("\n")[0]),
+    }, note: `unknown screen ${screen.width}x${screen.height}` });
   await run("overview.js", { ...widgetOpts, family: "large", expect: {
     "ruler first: the date, then 13 day initials, each placed over its box": ({ text, widget }) => {
       const img = widget.children[0].children.find(c => c.image);

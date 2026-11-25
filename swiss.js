@@ -52,8 +52,11 @@ S.metrics = (as) => {
   const large = family === "large" || family === "extraLarge";
   const small = family === "small";
   const lock = family.startsWith("accessory");
-  const innerW = small ? 130 : Math.max(260, Math.min(s.width, s.height) - 56 - 28);
-  const [h, hLarge] = S.WIDGET_H[`${Math.min(s.width, s.height)}x${Math.max(s.width, s.height)}`] || [149, 344];
+  const k = `${Math.min(s.width, s.height)}x${Math.max(s.width, s.height)}`;
+  // the width follows the screen only on known iPhones: on a bigger screen (an iPhone Duo's inner one)
+  // screen minus margins is far wider than the widget, and every row was cut off at both edges
+  const innerW = small ? 130 : S.WIDGET_H[k] ? Math.max(260, Math.min(s.width, s.height) - 56 - 28) : 260;
+  const [h, hLarge] = S.WIDGET_H[k] || [149, 344];
   const availH = (large ? hLarge : h) - S.PAD[0] - S.PAD[2];
   return { family, large, small, lock, innerW, availH };
 };
