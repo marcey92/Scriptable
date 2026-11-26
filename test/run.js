@@ -562,6 +562,19 @@ async function runInner(file, opts) {
       "without tap actions the date row opens the habit menu": ({ widget }) => !widget.children[0].action && widget.children[0].url.endsWith("?menu=1"),
     }, note: "older Scriptable" });
   }
+  {
+    const all = n => [n, ...(n.children || []).flatMap(all)];
+    const noNested = widget => all(widget).every(n => !n.url || !all(n).slice(1).some(c => c.url));
+    await run("overview.js", { ...widgetOpts, family: "large", expect: {
+      "a habit's name and its boxes are separate tap areas, never one inside the other": ({ widget }) => {
+        const urls = all(widget).filter(n => n.url).map(n => n.url);
+        return urls.some(u => u.endsWith("?days=Anki")) && urls.some(u => u.endsWith("?habit=Anki")) && noNested(widget);
+      },
+    }, note: "habit tap areas" });
+    await run("habit-grid.js", { family: "medium", expect: {
+      "the habit widget's name and boxes are separate tap areas too": ({ widget }) => noNested(widget) && all(widget).some(n => n.url && n.url.endsWith("?days=Anki")),
+    }, note: "habit tap areas" });
+  }
   await run("overview.js", { ...widgetOpts, inApp: true, note: "preview" });
   await run("overview.js", { ...widgetOpts, inApp: true, query: { menu: "1" }, expect: {
     "tapping the Habits header opens the menu": ({ alerts, widget }) => alerts === 1 && !widget,

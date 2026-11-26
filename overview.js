@@ -38,8 +38,9 @@ function build(cal, habits, now) {
   const runURL = URLScheme.forRunningScript();
   H.drawGrid(w, g.W, habits, runURL);
 
+  // the sign (choose calendars) sits outside the events' link (open Calendar): nested links lose on the phone
+  S.gSection(w, g.W, "Calendar", null, `${runURL}?calendars=1`);
   const calBox = w.addStack(); calBox.layoutVertically(); calBox.url = CALENDAR_URL;
-  S.gSection(calBox, g.W, "Calendar", null, `${runURL}?calendars=1`);   // the sign: choose calendars
   C.drawTimetable(calBox, g.W, calRows, calN);
 
   const inBox = w.addStack(); inBox.layoutVertically(); inBox.url = N.MAIL_URL;
