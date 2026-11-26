@@ -7,11 +7,11 @@ Scriptable widgets for iOS in one fixed style: a title, a hairline rule, then ro
 | `habit-grid.js` | One row of boxes per habit; tap a row to tick today, tap a name to fix earlier days | Medium, large, Lock Screen |
 | `calendar-list.js` | The next days that have events | Small, medium, large, Lock Screen |
 | `battery.js` | Charge as a figure and a bar of boxes | Small, medium, Lock Screen |
-| `weather.js` | Hours, temperature, conditions, rain chance | Small, medium, large, Lock Screen |
+| `weather.js` | Hours, temperature, conditions, wind (with gusts when strong), rain chance; UV next to the place from 3 up | Small, medium, large, Lock Screen |
 | `orders.js` | "Inbox": one list of parcels and important emails, urgent ones get a ★ (from the misc server) | Small, medium, large, Lock Screen |
 | `hermes.js` | What Hermes did on its own, one line each; header shows when it last ran. A failed calendar add on the phone shows as a ★ line | Small, medium, large |
 | `quotes.js` | A mock-motivational work quote, new each day; each weekday has its own | Lock Screen, small, medium |
-| `overview.js` | Habits, calendar and Inbox set like a timetable on a 15 pt grid: a day ruler over 13 days of habits, then day / time / what for events and mail (Inbox at most 5); tap a habit to tick it | Large |
+| `overview.js` | Habits, calendar and Inbox set like a timetable on a 15 pt grid: a day ruler over 13 days of habits, then day / time / what for two weeks of events and the Inbox (at most 5). Tap a habit's boxes to tick today, its name to fix earlier days, the date to refresh, the Calendar sign to choose calendars | Large |
 | `swiss.js` | The shared style. Not a widget; the others load it | |
 | `lib-calendar.js`, `lib-habits.js`, `lib-now.js` | The calendar, habit and Inbox logic, shared by their own widget and `overview.js`. Not widgets | |
 | `update.js` | Pulls the latest scripts from this repo | Run in the app |
@@ -25,15 +25,17 @@ Every widget starts with `importModule("swiss")`. Colours, type sizes, margins, 
 1. Copy all the `.js` files into Scriptable (they live in iCloud Drive → Scriptable).
 2. Run each widget once inside the app so iOS can ask for calendar or location access.
 3. Add a Scriptable widget to the Home Screen or Lock Screen and pick the script.
-4. For `habit-grid.js` and `overview.js`, set the widget's "When Interacting" to "Run Script".
+4. Scriptable 1.8 has no "When Interacting" setting: taps on a widget either follow a link the script sets (opening Scriptable, Calendar or Mail) or, for the overview's date row, redraw the widget in place.
 
 The habit list is `HABITS` at the top of `lib-habits.js`; the habit widget and the overview both follow it.
 
-Missed a day? Tap the habit's **name** on the habit widget or the overview. A list opens with that habit's last two weeks (Today, Yesterday, Wed 21.10, …), ✓ on the ticked ones; tap a day to tick or untick it, then Done. Tapping the boxes still ticks today. The habit menu also has "Earlier days…" to go day by day instead.
+Missed a day? Tap the habit's **name** on the habit widget or the overview. A list opens with that habit's last two weeks (Today, Yesterday, Wed 21.10, …), ✓ on the ticked ones; tap a day to tick or untick it, then Done. Tapping the boxes still ticks today. Habits turn over to a new day at 4am, so a tick at 1am counts for the evening before.
+
+Ticking in place (without Scriptable opening) isn't possible yet: Scriptable 1.8's buttons and toggles never tell the script what was tapped (`args.widgetAction` is always null), so the only tap that works inside the widget is a refresh.
 
 After that, run `update.js` to pull changes from GitHub. For a private repo, put a read-only token in `TOKEN` at the top of `update.js` on your phone (never commit it).
 
-## Orders widget
+## Inbox widget
 
 `orders.js` reads `https://misc.mrdrr.uk/widget/api/now`, one list that Hermes keeps up to date and fully decides: which items, their order, the stars and the wording (format: `apps/widget/README.md` in misc-apps). Until that feed exists it falls back to the older `/orders` and `/important` pair. The read token is kept in the iPhone Keychain, never in the script or the repo.
 

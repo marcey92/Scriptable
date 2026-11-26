@@ -53,18 +53,12 @@ function buildWidget(result, label) {
   const line = (left, text, colour) =>
     S.row(w, innerW, [{ text: left, w: S.TIME_W, mono: true }, { text }], colour);
 
-  // up to `rows` lines of events, with a "+N more" line when they don't all fit
+  // up to `rows` lines of events: whatever doesn't fit is left off, without a "+N more" line
   const list = (events, rows) => {
-    const more = events.length > rows;
-    const shown = more ? events.slice(0, Math.max(1, rows - 1)) : events;
-    shown.forEach((e, i) => {
+    events.slice(0, Math.max(1, rows)).forEach((e, i) => {
       if (i > 0) w.addSpacer(S.ROW_GAP);
       line(e.isAllDay ? "—" : S.timeLabel(e.startDate), e.title, S.FG);
     });
-    if (more && rows > 1) {
-      w.addSpacer(S.ROW_GAP);
-      line("", `+${events.length - shown.length} more`, S.DIM);
-    }
   };
 
   const days = result.days || [];

@@ -2,10 +2,7 @@
 const S = importModule("swiss");
 
 // One list of what is going on: parcels and important emails, read from Marcel's misc server
-// (pushed there by Hermes). A star marks important emails and problem parcels.
-// Home Screen widgets can be read by bystanders, so a parcel shows only its retailer (or the generic
-// title of a private order) and status, and an email only its sender and subject. No tracking
-// numbers, no email summaries or bodies.
+// (pushed there by Hermes, which decides the items, their order, the stars and the wording).
 const BASE = "https://misc.mrdrr.uk/widget/api/";
 const KEY = "misc-widget-read-token";   // the read token lives in the Keychain, never in this file
 const TITLE = "Inbox";
@@ -190,7 +187,8 @@ function buildWidget(data) {
   return S.finish(w);
 }
 
-// `rows` lines of items under a header that is already drawn (also used by the overview widget).
+// `rows` lines of items under a header that is already drawn (the Inbox and Hermes widgets; the overview
+// uses drawTimetable).
 // medium and large: time or date, text (starred ones begin with ★), status. small: no time, a short status.
 function drawRows(w, innerW, rows, data, small = false, empty = "Nothing going on") {
   if (data.error || data.rejected) {
