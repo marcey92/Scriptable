@@ -20,6 +20,8 @@ class Stack {
     const x = new Text(t); this.children.push(x); return x;
   }
   addSpacer(n) { this.children.push({ spacer: n === undefined ? "flex" : n }); }
+  // Scriptable 1.8 tap actions; a run with { noActions: true } stands in for an older Scriptable without them
+  setAction(title, options) { this.action = { title, ...options }; }
   addImage(img) { const x = new Text(img.drawn.join(" ")); x.image = img; this.children.push(x); return x; }
   centerAlignContent() {} bottomAlignContent() {} topAlignContent() {}
   layoutHorizontally() { this.vertical = false; } layoutVertically() { this.vertical = true; }
@@ -72,9 +74,11 @@ function describe(node) {
   return kids.join(node.vertical ? "\n" : "  ");
 }
 async function run(file, opts = {}) {
+  const realSetAction = Stack.prototype.setAction;
+  if (opts.noActions) Stack.prototype.setAction = undefined;
   const realNow = Date.now;
   if (opts.clock) Date.now = () => opts.clock.getTime();   // pretend it's another time (habit day turnover)
-  try { return await runInner(file, opts); } finally { Date.now = realNow; }
+  try { return await runInner(file, opts); } finally { Date.now = realNow; Stack.prototype.setAction = realSetAction; }
 }
 async function runInner(file, opts) {
   const now = new Date();
@@ -88,7 +92,7 @@ async function runInner(file, opts) {
   const g = {
     console: { log: () => {} },
     config: { runsInWidget: opts.inApp ? false : true, widgetFamily: opts.family },
-    args: { widgetParameter: opts.param || null, queryParameters: opts.query || {} },
+    args: { widgetParameter: opts.param || null, queryParameters: opts.query || {}, widgetAction: opts.action || null },
     Color: class { constructor(hex, alpha = 1) { this.hex = hex; this.alpha = alpha; } static white() { return new g.Color("#FFFFFF"); } },
     Size: class { constructor(w, h) { this.width = w; this.height = h; } },
     Rect: class { constructor(x, y, w, h) { this.x = x; this.y = y; this.width = w; this.height = h; } },
@@ -545,6 +549,39 @@ async function runInner(file, opts) {
     "a starred sender starts with ★": ({ text }) => /★ Parcel/.test(text),
   }, note: "hidden calendar, stars" });
   delete files["/docs/swiss-overview-hidden-calendars.json"];
+  // tap actions (Scriptable 1.8): habit boxes tick in place, the date row redraws, the Calendar sign picks calendars
+  {
+    const all = n => [n, ...(n.children || []).flatMap(all)];
+    const hd = d => { const x = new Date(Date.now() - 4 * 3600 * 1000); x.setDate(x.getDate() - d); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`; };
+    files["/docs/habit-grid.json"] = JSON.stringify({});
+    await run("overview.js", { ...widgetOpts, family: "large", expect: {
+      "every habit box is a tap action for its own day": ({ widget }) => {
+        const ids = all(widget).filter(n => n.action && n.action.id.startsWith("tick|")).map(n => n.action.id);
+        return ids.length === 13 * 4 && ids.includes(`tick|Anki|${hd(0)}`) && ids.includes(`tick|Gratitude|${hd(12)}`);
+      },
+      "the date row is a refresh action": ({ widget }) => widget.children[0].action && widget.children[0].action.id === "refresh",
+      "rows no longer open the app to tick": ({ widget }) => !all(widget).some(n => n.url && n.url.includes("?habit=")),
+      "the Calendar sign picks calendars": ({ widget }) => all(widget).some(n => n.url && n.url.endsWith("?calendars=1")),
+    }, note: "tap actions" });
+    await run("overview.js", { ...widgetOpts, family: "large", action: { id: `tick|Meditate|${hd(2)}` }, expect: {
+      "tapping a past day's box ticks that day": ({ files }) => (JSON.parse(files["/docs/habit-grid.json"]).Meditate || []).includes(hd(2)),
+      "and the redrawn widget shows it": ({ text }) => /^Meditate(\s+[□■]){10}\s+■(\s+□){2}\s+1$/m.test(text),
+    }, note: "tap a box" });
+    await run("overview.js", { ...widgetOpts, family: "large", action: { id: `tick|Meditate|${hd(2)}` }, expect: {
+      "tapping it again unticks it": ({ files }) => !(JSON.parse(files["/docs/habit-grid.json"]).Meditate || []).includes(hd(2)),
+    }, note: "tap it again" });
+    await run("overview.js", { ...widgetOpts, family: "large", action: { id: "tick|Nonsense|2026-01-01" }, expect: {
+      "an unknown action changes nothing": ({ files }) => !JSON.parse(files["/docs/habit-grid.json"]).Nonsense,
+    }, note: "unknown action" });
+    await run("overview.js", { ...widgetOpts, family: "large", noActions: true, expect: {
+      "without tap actions, rows open the app to tick today and the date row opens the menu": ({ widget }) =>
+        all(widget).some(n => n.url && n.url.includes("?habit=Anki")) && widget.children[0].url.endsWith("?menu=1"),
+    }, note: "older Scriptable" });
+    await run("habit-grid.js", { family: "medium", action: { id: `tick|Gratitude|${hd(0)}` }, expect: {
+      "the habit widget ticks a tapped row in place": ({ files }) => JSON.parse(files["/docs/habit-grid.json"]).Gratitude.includes(hd(0)),
+    }, note: "tap a row" });
+    files["/docs/habit-grid.json"] = JSON.stringify({ Anki: [new Date().toISOString().slice(0, 10)] });
+  }
   await run("overview.js", { ...widgetOpts, inApp: true, note: "preview" });
   await run("overview.js", { ...widgetOpts, inApp: true, query: { menu: "1" }, expect: {
     "tapping the Habits header opens the menu": ({ alerts, widget }) => alerts === 1 && !widget,
