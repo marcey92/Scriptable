@@ -11,6 +11,7 @@ Scriptable widgets for iOS in one fixed style: a title, a hairline rule, then ro
 | `orders.js` | "Inbox": one list of parcels and important emails, urgent ones get a ★ (from the misc server) | Small, medium, large, Lock Screen |
 | `hermes.js` | What Hermes did on its own, one line each; header shows when it last ran. A failed calendar add on the phone shows as a ★ line | Small, medium, large |
 | `quotes.js` | A mock-motivational work quote, new each day; each weekday has its own | Lock Screen, small, medium |
+| `reminders.js` | What's left in Apple Reminders: overdue, today, later, then undated. Tap a line to mark it done, the title to open Reminders | Small, medium, large, Lock Screen |
 | `overview.js` | Habits, calendar and Inbox set like a timetable on a 15 pt grid: a day ruler over 13 days of habits, then day / time / what for two weeks of events and the Inbox (at most 5). Tap a habit's boxes to tick today, its name to fix earlier days, the date to refresh, the Calendar sign to choose calendars | Large |
 | `swiss.js` | The shared style. Not a widget; the others load it | |
 | `lib-calendar.js`, `lib-habits.js`, `lib-now.js` | The calendar, habit and Inbox logic, shared by their own widget and `overview.js`. Not widgets | |
@@ -43,6 +44,14 @@ After that, run `update.js` to pull changes from GitHub. For a private repo, put
 2. Add a Scriptable widget and pick `orders.js`.
 
 It shows one line per item in three columns, like the weather widget: the time (with a dot after it, "21:10·", if it was yesterday, or the date for anything older), the title with a ★ if it matters, and the detail. Items are newest first; whatever doesn't fit is left off, starred or not. If Hermes hasn't updated the feed for 90 minutes (its `updated` time, not when the phone last fetched), the Inbox header says "Stale since 14:02" and the list stays as it was. If the server can't be reached it draws the last good copy, judged the same way; with nothing cached it says "No data". It stays white on navy like the rest, with no colour.
+
+## Reminders widget
+
+`reminders.js` reads Apple Reminders on the phone (no server). Run it once in Scriptable so iOS asks for Reminders access, then add a Scriptable widget and pick it.
+
+One line per reminder: the time column shows the date when it's overdue or due later, the time when it's due today ("—" for today without a time), and nothing for reminders without a due date, which come last, newest first. The header says how many are overdue, or due today. To show only some lists, put their names in the widget's Parameter field, comma-separated (`Shopping, Home`).
+
+Tapping a line opens Scriptable with "Mark as done" or "Open Reminders", then drops back to the Home Screen; the widget shows the change when it next redraws. Tapping the title opens Reminders. On the Lock Screen: the next three dated reminders (rectangular), the number due today or overdue (circular), the first one (inline).
 
 ## Events from Hermes
 

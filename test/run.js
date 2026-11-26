@@ -8,6 +8,7 @@ let failures = 0;
 let feedCalls = null;
 const savedEvents = [];   // events scripts created with CalendarEvent.save(), kept across runs
 let nextId = 1;
+const completed = [], opened = [];   // reminders marked done, URLs opened
 const files = {};   // fake Scriptable documents folder
 class Text {
   constructor(t) { this.text = t; }
@@ -88,6 +89,14 @@ async function runInner(file, opts) {
     { title: "Brunch", startDate: at(3, 11), endDate: at(3, 12), isAllDay: false, cal: "Home" },
   ];
   let widget = null, alerts = 0, keychainSet = null;
+  const defaultReminders = [
+    { identifier: "r1", title: "Renew passport", dueDate: at(-2, 0), dueDateIncludesTime: false, list: "Reminders", creationDate: at(-9, 9) },
+    { identifier: "r2", title: "Call landlord", dueDate: new Date(now.getTime() + 2 * 60000), dueDateIncludesTime: true, list: "Reminders", creationDate: at(-1, 9) },
+    { identifier: "r3", title: "Buy batteries", dueDate: at(0, 0), dueDateIncludesTime: false, list: "Shopping", creationDate: at(-1, 9) },
+    { identifier: "r4", title: "Book dentist", dueDate: at(2, 9), dueDateIncludesTime: true, list: "Reminders", creationDate: at(-3, 9) },
+    { identifier: "r5", title: "Fix bike light", dueDate: null, list: "Reminders", creationDate: at(-1, 8) },
+    { identifier: "r6", title: "Old idea", dueDate: null, list: "Reminders", creationDate: at(-20, 8) },
+  ];
   const g = {
     console: { log: () => {} },
     config: { runsInWidget: opts.inApp ? false : true, widgetFamily: opts.family },
@@ -138,7 +147,18 @@ async function runInner(file, opts) {
       forEvents: async () => [{ title: "Home" }, { title: "you@gmail.com" }],
       defaultForEvents: async () => ({ title: "Home" }),
       forEventsByTitle: async t => ({ title: t }),
+      forReminders: async () => [{ title: "Reminders" }, { title: "Shopping" }],
     },
+    Reminder: class {
+      save() { completed.push(this.title); }
+      static async allIncomplete(cals = []) {
+        if (opts.noReminders) throw new Error("denied");
+        const names = cals.map(c => c.title);
+        return (opts.reminders || defaultReminders).filter(r => !names.length || names.includes(r.list))
+          .map(r => Object.assign(new g.Reminder(), r));
+      }
+    },
+    Safari: { open: url => { opened.push(url); } },
     CalendarEvent: class {
       save() {
         if (opts.saveFails) throw new Error("not allowed");
@@ -597,6 +617,32 @@ async function runInner(file, opts) {
     if (quotes.length !== 28) { console.log("     ! expected 4 quotes for each of 7 days"); failures++; }
     failures += long.length ? 1 : 0;
   }
+  for (const family of [...home, ...lock]) await run("reminders.js", { family });
+  await run("reminders.js", { family: "large", expect: {
+    "overdue first, then today (no time first, then by time), later, then undated newest first": ({ text }) => {
+      const l = text.split("\n").slice(2).map(x => x.replace(/\s+/g, " ").trim());
+      return /^\d\d\.\d\d Renew passport$/.test(l[0]) && l[1] === "— Buy batteries" && /^\d\d:\d\d Call landlord$/.test(l[2])
+        && /^\d\d\.\d\d Book dentist$/.test(l[3]) && l[4] === "Fix bike light" && l[5] === "Old idea";
+    },
+    "header counts the overdue ones": ({ text }) => /Reminders\s+1 overdue/.test(text.split("\n")[0]),
+    "each line links to marking it done, the title opens Reminders": ({ widget }) =>
+      widget.children.filter(c => c.url && c.url.includes("?done=")).length === 6 && widget.children[0].url === "x-apple-reminderkit://",
+  }, note: "order" });
+  await run("reminders.js", { family: "medium", param: "Shopping", expect: {
+    "the Parameter picks the lists": ({ text }) => text.includes("Buy batteries") && !text.includes("Renew passport"),
+  }, note: "one list" });
+  await run("reminders.js", { family: "medium", param: "Nope", expect: {
+    "an unknown list says so": ({ text }) => text.includes("No list named Nope"),
+  }, note: "unknown list" });
+  await run("reminders.js", { family: "medium", reminders: [], expect: { "empty": ({ text }) => text.includes("Nothing to do") }, note: "empty" });
+  await run("reminders.js", { family: "medium", noReminders: true, expect: { "no access": ({ text }) => text.includes("allow Reminders") }, note: "no access" });
+  await run("reminders.js", { family: "accessoryCircular", expect: { "counts overdue and today": ({ text }) => text === "3" }, note: "count" });
+  await run("reminders.js", { inApp: true, query: { done: "r4" }, sheets: [0], expect: {
+    "tapping a line and choosing Mark as done completes that reminder": () => completed.length === 1 && completed[0] === "Book dentist",
+  }, note: "mark done" });
+  await run("reminders.js", { inApp: true, query: { done: "r4" }, sheets: [], expect: {
+    "cancel changes nothing": () => completed.length === 1,
+  }, note: "cancel" });
   await run("update.js", { inApp: true });
   console.log(`\n${failures ? failures + " failing" : "all passing"}`);
   process.exit(failures ? 1 : 0);
