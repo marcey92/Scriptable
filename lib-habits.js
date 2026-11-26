@@ -152,22 +152,25 @@ function drawRows(w, innerW, cell, data, runURL) {
     if (i > 0) w.addSpacer(S.ROW_GAP);
     const row = w.addStack(); row.size = new Size(innerW, cell);
     row.spacing = gap; row.centerAlignContent();
-    row.url = `${runURL}?habit=${encodeURIComponent(h)}`;
 
+    // two tap areas side by side, never nested: the name lists its days, the boxes and count tick today
     const n = row.addStack(); n.size = new Size(NAME_W, cell); n.centerAlignContent();
     n.url = `${runURL}?days=${encodeURIComponent(h)}`;
     const t = n.addText(h); t.lineLimit = 1;
     t.font = Font.mediumSystemFont(textSize); t.textColor = S.FG;
     n.addSpacer();
 
+    const ticks = row.addStack(); ticks.size = new Size(innerW - NAME_W - gap, cell);
+    ticks.spacing = gap; ticks.centerAlignContent();
+    ticks.url = `${runURL}?habit=${encodeURIComponent(h)}`;
     let done = 0;
     for (const d of days) {
       const on = isDone(data, h, d); if (on) done++;
-      S.box(row, cell, on);
+      S.box(ticks, cell, on);
     }
 
-    row.addSpacer();
-    const num = row.addText(String(done)); num.lineLimit = 1;
+    ticks.addSpacer();
+    const num = ticks.addText(String(done)); num.lineLimit = 1;
     num.font = Font.regularMonospacedSystemFont(textSize); num.textColor = S.FG;
   });
 }
@@ -209,13 +212,16 @@ function drawGrid(w, W, data, runURL) {
 
   for (const h of HABITS) {
     const row = w.addStack(); row.size = new Size(W, S.M); row.centerAlignContent(); row.spacing = 0;
-    row.url = `${runURL}?habit=${encodeURIComponent(h)}`;
-    S.gCell(row, { text: h, w: S.G.KEY }, S.M).url = `${runURL}?days=${encodeURIComponent(h)}`;   // the name: its days
+    // two tap areas side by side, never nested (on the phone a link on the row beat the one on the name):
+    // the name lists the habit's days to fix earlier ones; the boxes and count tick today
+    S.gCell(row, { text: h, w: S.G.KEY }, S.M).url = `${runURL}?days=${encodeURIComponent(h)}`;
+    const ticks = row.addStack(); ticks.size = new Size(W - S.G.KEY, S.M); ticks.centerAlignContent(); ticks.spacing = 0;
+    ticks.url = `${runURL}?habit=${encodeURIComponent(h)}`;
     let done = 0;
     for (const d of days) {
       const on = isDone(data, h, d); if (on) done++;
-      S.box(row, GRID_BOX, on);
-      row.addSpacer(S.M - GRID_BOX);
+      S.box(ticks, GRID_BOX, on);
+      ticks.addSpacer(S.M - GRID_BOX);
     }
     // the count is drawn, right-aligned, like the initials: on a mini its slot is only 15 pt wide,
     // and text in a cell that narrow gets clipped
@@ -223,7 +229,7 @@ function drawGrid(w, W, data, runURL) {
     ctx.size = new Size(countW, S.M); ctx.opaque = false; ctx.respectScreenScale = true;
     ctx.setTextAlignedRight(); ctx.setTextColor(S.FG); ctx.setFont(S.F.mono);
     ctx.drawTextInRect(String(done), new Rect(0, 1, countW, S.M - 1));
-    const num = row.addImage(ctx.getImage()); num.imageSize = new Size(countW, S.M);
+    const num = ticks.addImage(ctx.getImage()); num.imageSize = new Size(countW, S.M);
   }
 }
 
