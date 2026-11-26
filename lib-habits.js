@@ -188,8 +188,9 @@ function drawGrid(w, W, data, runURL) {
   const countW = W - S.G.KEY - nDays * S.M;
   const ruler = w.addStack(); ruler.size = new Size(W, S.M); ruler.centerAlignContent(); ruler.spacing = 0;
   // tapping the date row redraws the widget (where tap actions are missing, it opens the habit menu). A tap
-  // action only takes on a stack with a background, so the row gets the widget's own navy (see swiss.js).
-  if (S.canAct(ruler)) { ruler.backgroundColor = S.BG; ruler.setAction("Refresh", { id: "refresh" }); }
+  // action only takes on a stack with a background (see swiss.js). The widget's own navy showed as a band
+  // (iOS styles the widget background, not a stack's), so the row gets white at 1%: invisible, but there.
+  if (S.canAct(ruler)) { ruler.backgroundColor = S.TAP_BG; ruler.setAction("Refresh", { id: "refresh" }); }
   else ruler.url = `${runURL}?menu=1`;
   S.gSign(ruler, S.dateLabel());   // the date as the habit band's sign, like Calendar and Inbox below
   // the initials are drawn into a picture, each centred over its box at exactly 15 pt spacing: laid out

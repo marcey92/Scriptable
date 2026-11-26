@@ -114,6 +114,7 @@ S.gRow = (parent, W, cells, h = S.M) => {
 // learns what was tapped (args.widgetAction is null for stacks, buttons and toggles), so actions can only
 // refresh. Where they're missing, callers fall back to URLs that open the app.
 S.canAct = stack => typeof stack.setAction === "function";
+S.TAP_BG = new Color("#FFFFFF", 0.01);   // a background you can't see, for stacks that carry a tap action
 
 // a section row, like a station sign: the label reversed out of a white block in the key column (navy
 // text on white), then a 2 pt rule to the right edge, with an optional status at its end
