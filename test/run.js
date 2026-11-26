@@ -552,6 +552,7 @@ async function runInner(file, opts) {
     const all = n => [n, ...(n.children || []).flatMap(all)];
     await run("overview.js", { ...widgetOpts, family: "large", expect: {
       "the date row is a refresh action, the only one": ({ widget }) => widget.children[0].action.id === "refresh" && all(widget).filter(n => n.action).length === 1,
+      "with the widget's navy as its background (a stack without one ignores taps on the phone)": ({ widget }) => widget.children[0].backgroundColor.hex === "#0F1F47",
       "the Calendar sign picks calendars": ({ widget }) => all(widget).some(n => n.url && n.url.endsWith("?calendars=1")),
     }, note: "tap step 1" });
     await run("overview.js", { ...widgetOpts, action: { id: "refresh" }, expect: {
