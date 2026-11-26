@@ -5,6 +5,7 @@ const H = importModule("lib-habits");
 
 // ---- run ----
 const data = await H.load();
+if (args.widgetAction) H.handleAction(data, args.widgetAction);   // a row tapped inside the widget: tick it, then draw
 const query = args.queryParameters || {};
 const tapped = query.habit;
 

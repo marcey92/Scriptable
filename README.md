@@ -11,7 +11,7 @@ Scriptable widgets for iOS in one fixed style: a title, a hairline rule, then ro
 | `orders.js` | "Inbox": one list of parcels and important emails, urgent ones get a ★ (from the misc server) | Small, medium, large, Lock Screen |
 | `hermes.js` | What Hermes did on its own, one line each; header shows when it last ran. A failed calendar add on the phone shows as a ★ line | Small, medium, large |
 | `quotes.js` | A mock-motivational work quote, new each day; each weekday has its own | Lock Screen, small, medium |
-| `overview.js` | Habits, calendar and Inbox set like a timetable on a 15 pt grid: a day ruler over 13 days of habits, then day / time / what for events and mail (Inbox at most 5); tap a habit to tick it | Large |
+| `overview.js` | Habits, calendar and Inbox set like a timetable on a 15 pt grid: a day ruler over 13 days of habits, then day / time / what for events and mail (Inbox at most 5). Tap a habit box to tick that day in place, the date to refresh, the Calendar sign to choose calendars | Large |
 | `swiss.js` | The shared style. Not a widget; the others load it | |
 | `lib-calendar.js`, `lib-habits.js`, `lib-now.js` | The calendar, habit and Inbox logic, shared by their own widget and `overview.js`. Not widgets | |
 | `update.js` | Pulls the latest scripts from this repo | Run in the app |
@@ -25,7 +25,7 @@ Every widget starts with `importModule("swiss")`. Colours, type sizes, margins, 
 1. Copy all the `.js` files into Scriptable (they live in iCloud Drive → Scriptable).
 2. Run each widget once inside the app so iOS can ask for calendar or location access.
 3. Add a Scriptable widget to the Home Screen or Lock Screen and pick the script.
-4. For `habit-grid.js` and `overview.js`, set the widget's "When Interacting" to "Run Script".
+4. For `habit-grid.js` and `overview.js`, set the widget's "When Interacting" to "Run Script". With Scriptable 1.8 on iOS 17 or later, taps on habit boxes and rows run inside the widget (no app switch); older versions fall back to opening Scriptable.
 
 The habit list is `HABITS` at the top of `lib-habits.js`; the habit widget and the overview both follow it.
 

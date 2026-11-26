@@ -111,6 +111,12 @@ S.gRow = (parent, W, cells, h = S.M) => {
   for (const c of cells) S.gCell(row, c.w ? c : { ...c, w: W - fixed }, h);
   return row;
 };
+// ---- tap actions (Scriptable 1.8, iOS 17+): a tap runs the script inside the widget, which then redraws ----
+// S.canAct(stack) says whether this Scriptable supports them; where it doesn't, callers fall back to URLs that
+// open the app. The tapped action's id arrives in args.widgetAction.id on the next run.
+S.canAct = stack => typeof stack.setAction === "function";
+S.act = (stack, title, id) => { stack.setAction(title, { id }); return stack; };
+
 // a section row, like a station sign: the label reversed out of a white block in the key column (navy
 // text on white), then a 2 pt rule to the right edge, with an optional status at its end
 // ("Stale since 14:02")
@@ -124,9 +130,10 @@ S.gSign = (row, label) => {
   row.addSpacer(SIGN_GAP);
   return sign;
 };
-S.gSection = (parent, W, label, status) => {
+S.gSection = (parent, W, label, status, signUrl) => {
   const row = parent.addStack(); row.size = new Size(W, S.M); row.centerAlignContent(); row.spacing = 0;
-  S.gSign(row, label);
+  const sign = S.gSign(row, label);
+  if (signUrl) sign.url = signUrl;   // the sign can do something of its own (the Calendar sign picks calendars)
   const statusW = status ? 111 : 0;
   const rule = row.addStack(); rule.size = new Size(W - S.G.KEY - statusW, 2); rule.backgroundColor = S.FG;
   if (status) { row.addSpacer(6); S.gCell(row, { text: status, w: 105, font: S.F.key, right: true }, S.M); }
