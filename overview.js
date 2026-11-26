@@ -11,10 +11,9 @@ const N = importModule("lib-now");
 //   Inbox       ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //   WED  11:12  ★ Homes & Villas  €900 claim...  <- day | time | sender | detail, at most INBOX_MAX
 // Each part is drawn by the same libraries as its own widget (lib-habits, lib-calendar, lib-now).
-// Tapping a habit box ticks or unticks that day in place, tapping a habit's name lists its days, tapping the
-// date row redraws the widget, tapping the Calendar sign chooses which calendars to show, tapping an event
-// opens Calendar and tapping the Inbox opens Mail. Without tap actions (before Scriptable 1.8 / iOS 17),
-// a habit row opens the app to tick today and the date row opens the habit menu.
+// Tapping a habit row ticks it for today, tapping a habit's name lists its last days to fix a missed one, tapping the ruler opens the habit menu (with "Calendars…" to
+// choose which calendars to show), tapping the calendar
+// opens Calendar and tapping the Inbox opens Mail.
 const CALENDAR_URL = "calshow://";
 const LOOK_AHEAD = 14;  // days of calendar: beyond a week, days are named by date
 const INBOX_MAX = 5;   // the Inbox never shows more than this many items; the calendar gets the rest
@@ -38,7 +37,7 @@ function build(cal, habits, now) {
   H.drawGrid(w, g.W, habits, runURL);
 
   const calBox = w.addStack(); calBox.layoutVertically(); calBox.url = CALENDAR_URL;
-  S.gSection(calBox, g.W, "Calendar", null, `${runURL}?calendars=1`);   // the sign: choose calendars
+  S.gSection(calBox, g.W, "Calendar", null);
   C.drawTimetable(calBox, g.W, calRows, calN);
 
   const inBox = w.addStack(); inBox.layoutVertically(); inBox.url = N.MAIL_URL;
@@ -58,15 +57,10 @@ if (!config.runsInWidget && tapped && H.HABITS.includes(tapped)) {
 } else if (!config.runsInWidget && query.days && H.HABITS.includes(query.days)) {
   await H.habitDays(await H.load(), query.days);   // tapped a habit's name: fix earlier days
   try { App.close(); } catch (e) {}
-} else if (!config.runsInWidget && query.calendars) {
-  await C.chooseCalendars();            // tapped the Calendar sign: choose which calendars to show
-  try { App.close(); } catch (e) {}
 } else if (!config.runsInWidget && query.menu) {
   // tapped the date row: tick habits, or choose which calendars the overview shows
   await H.menu(await H.load(), [{ label: "Calendars…", run: C.chooseCalendars }]);
 } else {
-  // a tap action inside the widget (a habit box or the date row): apply it, then draw as usual
-  if (args.widgetAction) H.handleAction(await H.load(), args.widgetAction);
   // the first run in the app asks for calendar access and, if missing, the feed's read token
   const token = await N.token();
   await C.syncFromFeed(token);         // add any events Hermes pushed before reading the calendar
