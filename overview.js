@@ -21,7 +21,9 @@ const INBOX_MAX = 5;   // the Inbox never shows more than this many items; the c
 function build(cal, habits, now) {
   const w = S.widget();
   w.setPadding(...S.G_PAD);
-  const g = S.grid(config.runsInWidget ? undefined : "large");   // the in-app preview is large
+  // the large size unless iOS says otherwise: the in-app preview, and a tap on it (which reruns the script
+  // as a widget but without a size), have no widget family
+  const g = S.grid(config.widgetFamily || "large");
   if (!g.large) {
     S.gRow(w, g.W, [{ text: "Overview", w: S.G.KEY, font: S.F.key }, { text: "Made for the large widget size" }]);
     return S.finish(w);
@@ -37,7 +39,7 @@ function build(cal, habits, now) {
   H.drawGrid(w, g.W, habits, runURL);
 
   const calBox = w.addStack(); calBox.layoutVertically(); calBox.url = CALENDAR_URL;
-  S.gSection(calBox, g.W, "Calendar", null);
+  S.gSection(calBox, g.W, "Calendar", null, `${runURL}?calendars=1`);   // the sign: choose calendars
   C.drawTimetable(calBox, g.W, calRows, calN);
 
   const inBox = w.addStack(); inBox.layoutVertically(); inBox.url = N.MAIL_URL;
@@ -56,6 +58,9 @@ if (!config.runsInWidget && tapped && H.HABITS.includes(tapped)) {
   try { App.close(); } catch (e) {}     // drop back to the Home Screen
 } else if (!config.runsInWidget && query.days && H.HABITS.includes(query.days)) {
   await H.habitDays(await H.load(), query.days);   // tapped a habit's name: fix earlier days
+  try { App.close(); } catch (e) {}
+} else if (!config.runsInWidget && query.calendars) {
+  await C.chooseCalendars();            // tapped the Calendar sign: choose which calendars to show
   try { App.close(); } catch (e) {}
 } else if (!config.runsInWidget && query.menu) {
   // tapped the date row: tick habits, or choose which calendars the overview shows
