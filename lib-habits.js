@@ -48,17 +48,6 @@ function toggle(data, h, d = habitNow()) {
 }
 function isDone(data, h, d) { return (data[h] || []).includes(key(d)); }
 
-// ---- tap actions: "tick|<habit>|<YYYY-MM-DD>" ticks or unticks that habit on that day ----
-const tickId = (h, d) => `tick|${h}|${key(d)}`;
-// handle args.widgetAction if it is one of ours; returns true when it changed something
-function handleAction(data, action) {
-  const parts = String((action && action.id) || "").split("|");
-  if (parts[0] !== "tick" || !HABITS.includes(parts[1]) || !/^\d{4}-\d\d-\d\d$/.test(parts[2] || "")) return false;
-  const [y, m, dd] = parts[2].split("-").map(Number);
-  toggle(data, parts[1], new Date(y, m - 1, dd, 12));
-  return true;
-}
-
 // ---- calendar: title of the next timed event still to come today ----
 async function nextEvent() {
   if (!SHOW_EVENT) return null;
@@ -163,8 +152,7 @@ function drawRows(w, innerW, cell, data, runURL) {
     if (i > 0) w.addSpacer(S.ROW_GAP);
     const row = w.addStack(); row.size = new Size(innerW, cell);
     row.spacing = gap; row.centerAlignContent();
-    // tapping the row ticks today in place (falls back to opening the app to tick it)
-    if (S.canAct(row)) S.act(row, `Tick ${h}`, tickId(h, habitNow())); else row.url = `${runURL}?habit=${encodeURIComponent(h)}`;
+    row.url = `${runURL}?habit=${encodeURIComponent(h)}`;
 
     const n = row.addStack(); n.size = new Size(NAME_W, cell); n.centerAlignContent();
     n.url = `${runURL}?days=${encodeURIComponent(h)}`;
@@ -186,8 +174,7 @@ function drawRows(w, innerW, cell, data, runURL) {
 
 // ---- the overview's habit band, on the 15 pt grid ----
 // A ruler row (the date in the key column, then each day's initial over its column, today in semibold;
-// tapping it redraws the widget), then one row per habit: name | a box per day | count of the days shown.
-// Tapping a box ticks or unticks that day in place; tapping a name lists its days in the app.
+// tapping it opens the menu), then one row per habit: name | a box per day | count of the days shown.
 // Each day is one 15 pt slot: a 12 pt box (or the initial) at its left, then the 3 pt gap.
 // On a screen missing from S.WIDGET_W the width falls back to the narrowest, where 13 days don't fit
 // (an iPhone Duo's inner screen drew "Invalid canvas size: -22 by 15"): show fewer days, keep the count.
@@ -197,8 +184,7 @@ function drawGrid(w, W, data, runURL) {
   const days = lastDays(nDays);
   const countW = W - S.G.KEY - nDays * S.M;
   const ruler = w.addStack(); ruler.size = new Size(W, S.M); ruler.centerAlignContent(); ruler.spacing = 0;
-  // tapping the date row redraws the widget (falls back to opening the habit menu)
-  if (S.canAct(ruler)) S.act(ruler, "Refresh", "refresh"); else ruler.url = `${runURL}?menu=1`;
+  ruler.url = `${runURL}?menu=1`;
   S.gSign(ruler, S.dateLabel());   // the date as the habit band's sign, like Calendar and Inbox below
   // the initials are drawn into a picture, each centred over its box at exactly 15 pt spacing: laid out
   // as text they either clipped (narrow cells) or drifted (the font's real width differs on the phone)
@@ -218,17 +204,13 @@ function drawGrid(w, W, data, runURL) {
 
   for (const h of HABITS) {
     const row = w.addStack(); row.size = new Size(W, S.M); row.centerAlignContent(); row.spacing = 0;
-    const tappable = S.canAct(row);
-    if (!tappable) row.url = `${runURL}?habit=${encodeURIComponent(h)}`;   // fallback: open the app to tick today
+    row.url = `${runURL}?habit=${encodeURIComponent(h)}`;
     S.gCell(row, { text: h, w: S.G.KEY }, S.M).url = `${runURL}?days=${encodeURIComponent(h)}`;   // the name: its days
     let done = 0;
     for (const d of days) {
       const on = isDone(data, h, d); if (on) done++;
-      // each day is a 15 pt tap target: the box at its left, then the gap; tapping ticks or unticks that day
-      const slot = row.addStack(); slot.size = new Size(S.M, S.M); slot.centerAlignContent(); slot.spacing = 0;
-      S.box(slot, GRID_BOX, on);
-      slot.addSpacer(S.M - GRID_BOX);
-      if (tappable) S.act(slot, `${h} ${S.dayMonth(d)}`, tickId(h, d));
+      S.box(row, GRID_BOX, on);
+      row.addSpacer(S.M - GRID_BOX);
     }
     // the count is drawn, right-aligned, like the initials: on a mini its slot is only 15 pt wide,
     // and text in a cell that narrow gets clipped
@@ -290,4 +272,4 @@ function buildLockInline(data) {
   return S.lockInline(`${TITLE} ${done}/${HABITS.length}`);
 }
 
-module.exports = { handleAction, drawGrid, HABITS, load, toggle, menu, habitDays, nextEvent, drawRows, buildWidget, buildLockRect, buildLockCircle, buildLockInline };
+module.exports = { drawGrid, HABITS, load, toggle, menu, habitDays, nextEvent, drawRows, buildWidget, buildLockRect, buildLockCircle, buildLockInline };
