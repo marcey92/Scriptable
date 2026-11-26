@@ -20,6 +20,7 @@ class Stack {
     const x = new Text(t); this.children.push(x); return x;
   }
   addSpacer(n) { this.children.push({ spacer: n === undefined ? "flex" : n }); }
+  setAction(title, options) { this.action = { title, ...options }; }   // Scriptable 1.8 tap actions
   addImage(img) { const x = new Text(img.drawn.join(" ")); x.image = img; this.children.push(x); return x; }
   centerAlignContent() {} bottomAlignContent() {} topAlignContent() {}
   layoutHorizontally() { this.vertical = false; } layoutVertically() { this.vertical = true; }
@@ -72,9 +73,11 @@ function describe(node) {
   return kids.join(node.vertical ? "\n" : "  ");
 }
 async function run(file, opts = {}) {
+  const realSetAction = Stack.prototype.setAction;
+  if (opts.noActions) Stack.prototype.setAction = undefined;   // an older Scriptable without tap actions
   const realNow = Date.now;
   if (opts.clock) Date.now = () => opts.clock.getTime();   // pretend it's another time (habit day turnover)
-  try { return await runInner(file, opts); } finally { Date.now = realNow; }
+  try { return await runInner(file, opts); } finally { Date.now = realNow; Stack.prototype.setAction = realSetAction; }
 }
 async function runInner(file, opts) {
   const now = new Date();
@@ -88,7 +91,7 @@ async function runInner(file, opts) {
   const g = {
     console: { log: () => {} },
     config: { runsInWidget: opts.inApp ? false : true, widgetFamily: opts.family },
-    args: { widgetParameter: opts.param || null, queryParameters: opts.query || {} },
+    args: { widgetParameter: opts.param || null, queryParameters: opts.query || {}, widgetAction: opts.action || null },
     Color: class { constructor(hex, alpha = 1) { this.hex = hex; this.alpha = alpha; } static white() { return new g.Color("#FFFFFF"); } },
     Size: class { constructor(w, h) { this.width = w; this.height = h; } },
     Rect: class { constructor(x, y, w, h) { this.x = x; this.y = y; this.width = w; this.height = h; } },
@@ -545,6 +548,19 @@ async function runInner(file, opts) {
     "a starred sender starts with ★": ({ text }) => /★ Parcel/.test(text),
   }, note: "hidden calendar, stars" });
   delete files["/docs/swiss-overview-hidden-calendars.json"];
+  {
+    const all = n => [n, ...(n.children || []).flatMap(all)];
+    await run("overview.js", { ...widgetOpts, family: "large", expect: {
+      "the date row is a refresh action, the only one": ({ widget }) => widget.children[0].action.id === "refresh" && all(widget).filter(n => n.action).length === 1,
+      "the Calendar sign picks calendars": ({ widget }) => all(widget).some(n => n.url && n.url.endsWith("?calendars=1")),
+    }, note: "tap step 1" });
+    await run("overview.js", { ...widgetOpts, action: { id: "refresh" }, expect: {
+      "a tap rerun without a widget size still draws the large layout": ({ text }) => !text.includes("Made for the large") && /^\s*Inbox/m.test(text),
+    }, note: "tap rerun, no family" });
+    await run("overview.js", { ...widgetOpts, family: "large", noActions: true, expect: {
+      "without tap actions the date row opens the habit menu": ({ widget }) => !widget.children[0].action && widget.children[0].url.endsWith("?menu=1"),
+    }, note: "older Scriptable" });
+  }
   await run("overview.js", { ...widgetOpts, inApp: true, note: "preview" });
   await run("overview.js", { ...widgetOpts, inApp: true, query: { menu: "1" }, expect: {
     "tapping the Habits header opens the menu": ({ alerts, widget }) => alerts === 1 && !widget,

@@ -111,6 +111,10 @@ S.gRow = (parent, W, cells, h = S.M) => {
   for (const c of cells) S.gCell(row, c.w ? c : { ...c, w: W - fixed }, h);
   return row;
 };
+// ---- tap actions (Scriptable 1.8, iOS 17+): a tap reruns the script inside the widget, which redraws ----
+// Where they're missing, callers fall back to URLs that open the app.
+S.canAct = stack => typeof stack.setAction === "function";
+
 // a section row, like a station sign: the label reversed out of a white block in the key column (navy
 // text on white), then a 2 pt rule to the right edge, with an optional status at its end
 // ("Stale since 14:02")
@@ -124,9 +128,10 @@ S.gSign = (row, label) => {
   row.addSpacer(SIGN_GAP);
   return sign;
 };
-S.gSection = (parent, W, label, status) => {
+S.gSection = (parent, W, label, status, signUrl) => {
   const row = parent.addStack(); row.size = new Size(W, S.M); row.centerAlignContent(); row.spacing = 0;
-  S.gSign(row, label);
+  const sign = S.gSign(row, label);
+  if (signUrl) sign.url = signUrl;   // the sign can do something of its own (the Calendar sign picks calendars)
   const statusW = status ? 111 : 0;
   const rule = row.addStack(); rule.size = new Size(W - S.G.KEY - statusW, 2); rule.backgroundColor = S.FG;
   if (status) { row.addSpacer(6); S.gCell(row, { text: status, w: 105, font: S.F.key, right: true }, S.M); }

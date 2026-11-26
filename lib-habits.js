@@ -184,7 +184,8 @@ function drawGrid(w, W, data, runURL) {
   const days = lastDays(nDays);
   const countW = W - S.G.KEY - nDays * S.M;
   const ruler = w.addStack(); ruler.size = new Size(W, S.M); ruler.centerAlignContent(); ruler.spacing = 0;
-  ruler.url = `${runURL}?menu=1`;
+  // tapping the date row redraws the widget (where tap actions are missing, it opens the habit menu)
+  if (S.canAct(ruler)) ruler.setAction("Refresh", { id: "refresh" }); else ruler.url = `${runURL}?menu=1`;
   S.gSign(ruler, S.dateLabel());   // the date as the habit band's sign, like Calendar and Inbox below
   // the initials are drawn into a picture, each centred over its box at exactly 15 pt spacing: laid out
   // as text they either clipped (narrow cells) or drifted (the font's real width differs on the phone)
