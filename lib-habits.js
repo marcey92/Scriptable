@@ -137,9 +137,9 @@ function buildWidget(data, eventTitle) {
   return S.finish(w);
 }
 
-// one row per habit: name, a box per day (today on the right), count. Tapping a row opens
-// `runURL?habit=<name>`, and the script behind runURL ticks it (also used by the overview widget).
-// Tapping the name opens `runURL?days=<name>`: that habit's last days, to fix a missed one.
+// the habit widget's rows: name, a box per day (today on the right), count. Tapping the boxes opens
+// `runURL?habit=<name>`, and the script behind runURL ticks today. Tapping the name opens
+// `runURL?days=<name>`: that habit's last days, to fix a missed one. (The overview uses drawGrid.)
 function drawRows(w, innerW, cell, data, runURL) {
   const gap = S.BOX_GAP;
   // the row puts `gap` between every child, spacers included: name, boxes, spacer, count. The width
@@ -176,8 +176,8 @@ function drawRows(w, innerW, cell, data, runURL) {
 }
 
 // ---- the overview's habit band, on the 15 pt grid ----
-// A ruler row (the date in the key column, then each day's initial over its column, today in semibold;
-// tapping it opens the menu), then one row per habit: name | a box per day | count of the days shown.
+// A ruler row (the date as a sign, then each day's initial over its column, today in semibold; tapping it
+// redraws the widget), then one row per habit: name | a box per day | count of the days shown.
 // Each day is one 15 pt slot: a 12 pt box (or the initial) at its left, then the 3 pt gap.
 // On a screen missing from S.WIDGET_W the width falls back to the narrowest, where 13 days don't fit
 // (an iPhone Duo's inner screen drew "Invalid canvas size: -22 by 15"): show fewer days, keep the count.
@@ -187,10 +187,8 @@ function drawGrid(w, W, data, runURL) {
   const days = lastDays(nDays);
   const countW = W - S.G.KEY - nDays * S.M;
   const ruler = w.addStack(); ruler.size = new Size(W, S.M); ruler.centerAlignContent(); ruler.spacing = 0;
-  // tapping the date row redraws the widget (where tap actions are missing, it opens the habit menu)
-  // On the phone a tap action only takes on a stack that has a background (tested: one without did nothing),
-  // so the row gets the widget's own navy. It only redraws: Scriptable 1.8 passes no args.widgetAction to
-  // the script (null for stacks, buttons and toggles alike), so taps can't tick habits in place yet.
+  // tapping the date row redraws the widget (where tap actions are missing, it opens the habit menu). A tap
+  // action only takes on a stack with a background, so the row gets the widget's own navy (see swiss.js).
   if (S.canAct(ruler)) { ruler.backgroundColor = S.BG; ruler.setAction("Refresh", { id: "refresh" }); }
   else ruler.url = `${runURL}?menu=1`;
   S.gSign(ruler, S.dateLabel());   // the date as the habit band's sign, like Calendar and Inbox below

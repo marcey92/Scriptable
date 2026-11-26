@@ -6,7 +6,6 @@ const S = {};
 // ---- colours ----
 S.BG = new Color("#0F1F47");            // deep navy, matched to the ocean wallpaper
 S.FG = new Color("#FFFFFF");
-S.DIM = new Color("#FFFFFF", 0.5);      // secondary text
 S.EMPTY = new Color("#FFFFFF", 0.18);   // empty box
 S.LOCK_ON = new Color("#FFFFFF");
 S.LOCK_OFF = new Color("#FFFFFF", 0.3);
@@ -54,13 +53,12 @@ S.metrics = (as) => {
   const small = family === "small";
   const lock = family.startsWith("accessory");
   const k = `${Math.min(s.width, s.height)}x${Math.max(s.width, s.height)}`;
-  // the width follows the screen only on known iPhones: on a bigger screen (an iPhone Duo's inner one)
-  // screen minus margins is far wider than the widget, and every row was cut off at both edges
-  // and never wider than the widget itself where its width is known (on the Duo the screen is far wider)
+  // the width follows the screen only on screens in the size table, and is never wider than the widget
+  // where its width is known (on the iPhone Duo's inner screen, screen minus margins is far wider)
   const fromScreen = Math.max(260, Math.min(s.width, s.height) - 56 - 28);
   const innerW = small ? 130 : !S.WIDGET_H[k] ? 260
     : S.WIDGET_W[k] ? Math.min(fromScreen, S.WIDGET_W[k] - S.PAD[1] - S.PAD[3]) : fromScreen;
-  const [h, hLarge] = S.WIDGET_H[k] || [149, 344];
+  const [h, hLarge] = S.WIDGET_H[k] || [141, 311];   // unknown screens: the smallest heights (as S.grid)
   const availH = (large ? hLarge : h) - S.PAD[0] - S.PAD[2];
   return { family, large, small, lock, innerW, availH };
 };
@@ -112,7 +110,9 @@ S.gRow = (parent, W, cells, h = S.M) => {
   return row;
 };
 // ---- tap actions (Scriptable 1.8, iOS 17+): a tap reruns the script inside the widget, which redraws ----
-// Where they're missing, callers fall back to URLs that open the app.
+// Tested on the phone: a stack's action only takes when the stack has a background, and the script never
+// learns what was tapped (args.widgetAction is null for stacks, buttons and toggles), so actions can only
+// refresh. Where they're missing, callers fall back to URLs that open the app.
 S.canAct = stack => typeof stack.setAction === "function";
 
 // a section row, like a station sign: the label reversed out of a white block in the key column (navy
@@ -191,9 +191,9 @@ S.row = (w, innerW, cells, colour = S.FG) => {
   return row;
 };
 
-// a dimmed one-line message, for empty and error states
+// a one-line message, for empty and error states (white like everything else: no grey text)
 S.note = (w, innerW, text, indent = 0) =>
-  S.row(w, innerW, indent ? [{ text: "", w: indent }, { text }] : [{ text }], S.DIM);
+  S.row(w, innerW, indent ? [{ text: "", w: indent }, { text }] : [{ text }]);
 
 // a square box, filled or empty
 S.box = (parent, size, on, lock = false) => {

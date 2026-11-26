@@ -4,16 +4,15 @@ const H = importModule("lib-habits");
 const N = importModule("lib-now");
 
 // Overview, set like a timetable on a 15 pt grid (see "the grid" in swiss.js):
-//   Thu 15.10   S S M T W T F S S M T W T        <- ruler: the date, then each day's initial
-//   Anki        ■ ■ □ ■ ...                 11   <- one row per habit, 13 days, count
-//   Calendar    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━    <- section row: label and a 2 pt rule
-//   THU  14:00  Psychoanalysis                   <- day | time | what; a 1 pt rule starts each later day
-//   Inbox       ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-//   WED  11:12  ★ Homes & Villas  €900 claim...  <- day | time | sender | detail, at most INBOX_MAX
-// Each part is drawn by the same libraries as its own widget (lib-habits, lib-calendar, lib-now).
-// Tapping a habit row ticks it for today, tapping a habit's name lists its last days to fix a missed one, tapping the ruler opens the habit menu (with "Calendars…" to
-// choose which calendars to show), tapping the calendar
-// opens Calendar and tapping the Inbox opens Mail.
+//   [Thu 15.10] S S M T W T F S S M T W T     <- the date as a sign, then each day's initial (drawn)
+//   Anki        □ □ ■ □ ...                1  <- one row per habit, up to 13 days, count
+//   [Calendar]  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━  <- section row: a sign and a 2 pt rule
+//   THU   14:00 Psychoanalysis                <- day (first row of each day) | time | what
+//   [Inbox]     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━  <- "Stale since …" at the end of the rule when stale
+//   WED   11:12 ★ Homes & Villas  €900 cla…   <- day | time | sender | detail, at most INBOX_MAX
+// Taps: a habit's boxes tick today, its name lists its days to fix earlier ones; the date row redraws the
+// widget (a tap action; without them it opens the habit menu); the Calendar sign chooses calendars, the
+// events open Calendar; the Inbox opens Mail. Tap areas never sit inside each other: the outer one wins.
 const CALENDAR_URL = "calshow://";
 const LOOK_AHEAD = 14;  // days of calendar: beyond a week, days are named by date
 const INBOX_MAX = 5;   // the Inbox never shows more than this many items; the calendar gets the rest
