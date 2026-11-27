@@ -286,6 +286,10 @@ async function runInner(file, opts) {
     "strong gusts show as a range": ({ text }) => /\d+–40 mph/.test(text),
   }, note: "gusty" });
   await run("weather.js", { family: "medium", sunny: true, expect: {
+    "the rule runs up to a short status: only the status's own width is left": ({ widget }) => {
+      const sec = widget.children[0], rule = sec.children.find(c => c.size && c.size.height === 2);
+      return rule.size.width > sec.size.width - 90 - 6 - 110;
+    },
     "UV from 3 shows next to the place": ({ text }) => /^Weather\s+■\s+London · UV \d+$/.test(text.split("\n")[0]),
   }, note: "sunny" });
   await run("weather.js", { family: "medium", offline: true, note: "offline, cached" });
