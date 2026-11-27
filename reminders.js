@@ -3,20 +3,22 @@ const S = importModule("swiss");
 // "Reminders": what's left to do today from Apple Reminders, set like the overview's timetable.
 // A reminder with a date only shows up on its day (and stays, as LATE, until it's done):
 //   [Reminders]  ━━━━━━━━━━━━━━━━━━━━  1 overdue
-//   LATE   24.11  Renew passport      <- overdue: LATE, then its date (or time, if due earlier today)
-//   FRI    —      Buy batteries       <- today: the weekday, "—" when it has no time
-//          14:00  Call landlord
-//                 Fix bike light      <- no due date (newest first, after the dated ones)
-// Tap a line to mark it done (Scriptable opens, asks, and closes); tap the sign to open Reminders.
+//   LATE   24.11  Renew passport          Home    <- overdue: LATE, then its date (or time, if due earlier today)
+//   FRI    —      Buy batteries       Shopping    <- today: the weekday, "—" when it has no time
+//          14:00  Call landlord           Home
+//                 Fix bike light          Home    <- no due date (newest first, after the dated ones)
+// The list is on the right, like a platform number, when the reminders shown come from more than one list.
+// Tapping the widget opens Reminders.
 // The widget's Parameter field can name lists to show, e.g. "Shopping, Home"; empty = every list.
 const TITLE = "Reminders";
 const REMINDERS_URL = "x-apple-reminderkit://";
+const LIST_W = 70;      // the list column (right-aligned)
 const UNDATED = true;   // also show reminders without a due date, after the dated ones
 
 const lists = () => (args.widgetParameter || "").split(",").map(x => x.trim()).filter(Boolean);
 
 // ---- loading ----
-// returns { items: [{ id, title, due, timed, overdue, today }] } or { error }
+// returns { items: [{ id, title, list, due, timed, overdue, today }] } or { error }
 async function load(names = lists()) {
   try {
     let cals = [];
@@ -32,7 +34,7 @@ async function load(names = lists()) {
       const due = r.dueDate || null, timed = !!(due && r.dueDateIncludesTime);
       // a reminder due today without a time isn't overdue until the day is over
       const overdue = !!due && (timed ? due < now : due < S.dayStart(0));
-      return { id: r.identifier, title: r.title || "", due, timed, overdue, today: !!due && due < end && !overdue,
+      return { id: r.identifier, title: r.title || "", list: (r.calendar && r.calendar.title) || "", due, timed, overdue, today: !!due && due < end && !overdue,
                created: r.creationDate ? r.creationDate.getTime() : 0 };
     }).filter(it => it.due ? it.overdue || it.today : UNDATED);   // nothing from days still to come
     items.sort((a, b) => (!a.due - !b.due) || (a.due && b.due ? a.due - b.due : b.created - a.created));
@@ -72,18 +74,20 @@ function timeText(it) {
 }
 
 function buildWidget(data) {
-  const { w, g, rows } = S.board(TITLE, headRight(data), REMINDERS_URL);
+  const { w, g, rows } = S.board(TITLE, headRight(data));
   const note = text => S.gRow(w, g.W, g.small ? [{ text }] : [{ text: "", w: S.G.KEY }, { text }]);
   if (data.error) { note(data.error); return S.finish(w); }
   if (!data.items.length) { note("Nothing to do"); return S.finish(w); }
-  const run = URLScheme.forRunningScript();
+  const shown = data.items.slice(0, rows);
+  const withList = !g.small && new Set(shown.map(it => it.list)).size > 1;
   let prev = null;
-  for (const it of data.items.slice(0, rows)) {
+  for (const it of shown) {
     const day = dayText(it);
     const what = { text: it.title };
     const cells = g.small ? [{ text: whenText(it), w: S.G.T, font: S.F.mono }, what]
-      : [{ text: day === prev ? "" : day, w: S.G.D, font: S.F.key }, { text: timeText(it), w: S.G.T, font: S.F.mono }, what];
-    S.gRow(w, g.W, cells).url = `${run}?done=${encodeURIComponent(it.id)}`;
+      : [{ text: day === prev ? "" : day, w: S.G.D, font: S.F.key }, { text: timeText(it), w: S.G.T, font: S.F.mono }, what,
+         ...(withList ? [{ text: it.list, w: LIST_W, right: true }] : [])];
+    S.gRow(w, g.W, cells);
     prev = day;
   }
   return S.finish(w);
@@ -97,42 +101,21 @@ function lockLines(data, max) {
 }
 function buildLockRect(data) {
   const w = S.lockWidget();
-  w.url = REMINDERS_URL;
   lockLines(data, 3).forEach((text, i) => { if (i > 0) w.addSpacer(3); S.lockText(w, text); });
   w.addSpacer();
   return w;
 }
 const dueCount = data => data.error ? 0 : data.items.filter(it => it.overdue || it.today).length;
 
-// ---- tapped a line: mark it done ----
-async function complete(id) {
-  let r = null;
-  try { r = (await Reminder.allIncomplete()).find(x => x.identifier === id) || null; } catch (e) {}
-  if (!r) return;   // done already, or deleted
-  const a = new Alert();
-  a.title = r.title;
-  a.addAction("Mark as done");
-  a.addAction("Open Reminders");
-  a.addCancelAction("Cancel");
-  const i = await a.presentSheet();
-  if (i === 0) { r.isCompleted = true; r.save(); }
-  else if (i === 1) Safari.open(REMINDERS_URL);
-}
-
 // ---- run ----
-const query = args.queryParameters || {};
-if (!config.runsInWidget && query.done) {
-  await complete(query.done);
-  try { App.close(); } catch (e) {}
-} else {
-  const data = await load();   // the first run in the app asks for Reminders access
-  const family = config.widgetFamily;
-  const widget = family === "accessoryRectangular" ? buildLockRect(data)
-    : family === "accessoryCircular" ? S.lockCircle(String(dueCount(data)))
-    : family === "accessoryInline" ? S.lockInline(lockLines(data, 1)[0])
-    : buildWidget(data);
-  S.refresh(widget);
-  if (config.runsInWidget) Script.setWidget(widget);
-  else await widget.presentMedium();   // preview when run inside the app
-}
+const data = await load();   // the first run in the app asks for Reminders access
+const family = config.widgetFamily;
+const widget = family === "accessoryRectangular" ? buildLockRect(data)
+  : family === "accessoryCircular" ? S.lockCircle(String(dueCount(data)))
+  : family === "accessoryInline" ? S.lockInline(lockLines(data, 1)[0])
+  : buildWidget(data);
+widget.url = REMINDERS_URL;   // tapping anywhere opens Reminders
+S.refresh(widget);
+if (config.runsInWidget) Script.setWidget(widget);
+else await widget.presentMedium();   // preview when run inside the app
 Script.complete();
