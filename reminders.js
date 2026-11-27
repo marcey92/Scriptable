@@ -3,16 +3,17 @@ const S = importModule("swiss");
 // "Reminders": what's left to do today from Apple Reminders, set like the overview's timetable.
 // A reminder with a date only shows up on its day (and stays, as LATE, until it's done):
 //   [Reminders]  ━━━━━━━━━━━━━━━━━━━━  1 overdue
-//   LATE   24.11  Renew passport          Home    <- overdue: LATE, then its date (or time, if due earlier today)
-//   FRI    —      Buy batteries       Shopping    <- today: the weekday, "—" when it has no time
-//          14:00  Call landlord           Home
-//                 Fix bike light          Home    <- no due date (newest first, after the dated ones)
-// The list is on the right, like a platform number, when the reminders shown come from more than one list.
+//   LATE   24.11  Renew passport     HOM    <- overdue: LATE, then its date (or time, if due earlier today)
+//   FRI    —      Buy batteries      SHO    <- today: the weekday, "—" when it has no time
+//          14:00  Call landlord      HOM
+//                 Fix bike light     HOM    <- no due date (newest first, after the dated ones)
+// The list's first three letters are on the right, like a platform number, when the reminders shown come
+// from more than one list.
 // Tapping the widget opens Reminders.
 // The widget's Parameter field can name lists to show, e.g. "Shopping, Home"; empty = every list.
 const TITLE = "Reminders";
 const REMINDERS_URL = "x-apple-reminderkit://";
-const LIST_W = 70;      // the list column (right-aligned)
+const LIST_W = 36;      // the list column (right-aligned): its first three letters, in capitals
 const UNDATED = true;   // also show reminders without a due date, after the dated ones
 
 const lists = () => (args.widgetParameter || "").split(",").map(x => x.trim()).filter(Boolean);
@@ -86,7 +87,7 @@ function buildWidget(data) {
     const what = { text: it.title };
     const cells = g.small ? [{ text: whenText(it), w: S.G.T, font: S.F.mono }, what]
       : [{ text: day === prev ? "" : day, w: S.G.D, font: S.F.key }, { text: timeText(it), w: S.G.T, font: S.F.mono }, what,
-         ...(withList ? [{ text: it.list, w: LIST_W, right: true }] : [])];
+         ...(withList ? [{ text: it.list.slice(0, 3).toUpperCase(), w: LIST_W, font: S.F.key, right: true }] : [])];
     S.gRow(w, g.W, cells);
     prev = day;
   }
