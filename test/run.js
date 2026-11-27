@@ -595,11 +595,11 @@ async function runInner(file, opts) {
       const all = n => [n, ...(n.children || []).flatMap(all)];
       return widget.url === "x-apple-reminderkit://" && all(widget).filter(n => n.url).length === 1;
     },
-    "each line names its list on the right, first three letters in capitals, when there are several": ({ text }) => /Buy batteries\s+SHO$/m.test(text) && /Renew passport\s+REM$/m.test(text),
+    "each line names its list on the right, first three letters, when there are several": ({ text }) => /Buy batteries\s+Sho$/m.test(text) && /Renew passport\s+Rem$/m.test(text),
   }, note: "order" });
   await run("reminders.js", { family: "medium", param: "Shopping", expect: {
     "the Parameter picks the lists": ({ text }) => text.includes("Buy batteries") && !text.includes("Renew passport"),
-    "one list: no list column": ({ text }) => !/Buy batteries\s+SHO/.test(text),
+    "one list: no list column": ({ text }) => !/Buy batteries\s+Sho/.test(text),
   }, note: "one list" });
   await run("reminders.js", { family: "medium", param: "Nope", expect: {
     "an unknown list says so": ({ text }) => text.includes("No list named Nope"),
