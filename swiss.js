@@ -115,8 +115,9 @@ S.gSection = (parent, W, label, status, signUrl) => {
   const sign = S.gSign(row, label);
   if (signUrl) sign.url = signUrl;   // the sign can do something of its own (the Calendar sign picks calendars)
   // the status is sized to its text, so the rule runs right up to it ("London" leaves a long rule).
-  // 6.4 pt a character covers semibold 11 pt with room to spare: a short guess would cut the text.
-  const textW = status ? Math.min(W - S.G.KEY - 30, Math.ceil(String(status).length * 6.4) + 4) : 0;
+  // 6.4 pt a character for semibold 11 pt, plus 12: the cell's flexible spacer (which right-aligns the
+  // text) never shrinks below about 8 pt, and on the phone a 42 pt cell cut "London" to "Lon…".
+  const textW = status ? Math.min(W - S.G.KEY - 30, Math.ceil(String(status).length * 6.4) + 12) : 0;
   const rule = row.addStack(); rule.size = new Size(W - S.G.KEY - (status ? textW + 6 : 0), 2); rule.backgroundColor = S.FG;
   if (status) { row.addSpacer(6); S.gCell(row, { text: status, w: textW, font: S.F.key, right: true }, S.M); }
   return row;
