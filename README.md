@@ -46,7 +46,7 @@ It shows up to 5 items, one line each: the day, the time (or the date for anythi
 
 One line per reminder, only on its day: reminders due on later days stay hidden until then. The time column shows the date when it's overdue, the time when it's due today ("—" for today without a time), and nothing for reminders without a due date, which come last, newest first. The header says how many are overdue, or due today. To show only some lists, put their names in the widget's Parameter field, comma-separated (`Shopping, Home`).
 
-When the reminders shown come from more than one list, each line names its list on the right by its first three letters (SHO for Shopping). Tapping the widget opens Reminders. On the Lock Screen: the next three dated reminders (rectangular), the number due today or overdue (circular), the first one (inline).
+When the reminders shown come from more than one list, each line names its list on the right by its first three letters (Sho for Shopping). Tapping the widget opens Reminders. On the Lock Screen: the next three dated reminders (rectangular), the number due today or overdue (circular), the first one (inline).
 
 ## Events from Hermes
 
