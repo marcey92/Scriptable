@@ -13,7 +13,7 @@ const S = importModule("swiss");
 // The widget's Parameter field can name lists to show, e.g. "Shopping, Home"; empty = every list.
 const TITLE = "Reminders";
 const REMINDERS_URL = "x-apple-reminderkit://";
-const LIST_W = 36;      // the list column (right-aligned): its first three letters
+const LIST_W = 36;      // the list column at the right edge, left-aligned so every code starts at the same place: its first three letters
 const UNDATED = true;   // also show reminders without a due date, after the dated ones
 
 const lists = () => (args.widgetParameter || "").split(",").map(x => x.trim()).filter(Boolean);
@@ -87,7 +87,7 @@ function buildWidget(data) {
     const what = { text: it.title };
     const cells = g.small ? [{ text: whenText(it), w: S.G.T, font: S.F.mono }, what]
       : [{ text: day === prev ? "" : day, w: S.G.D, font: S.F.key }, { text: timeText(it), w: S.G.T, font: S.F.mono }, what,
-         ...(withList ? [{ text: it.list.slice(0, 3), w: LIST_W, right: true }] : [])];
+         ...(withList ? [{ text: it.list.slice(0, 3), w: LIST_W }] : [])];
     S.gRow(w, g.W, cells);
     prev = day;
   }
