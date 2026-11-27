@@ -19,7 +19,6 @@ const INBOX_MAX = 5;   // the Inbox never shows more than this many items; the c
 
 function build(cal, habits, now) {
   const w = S.widget();
-  w.setPadding(...S.G_PAD);
   // the large size unless iOS says otherwise: the in-app preview, and a tap on it (which reruns the script
   // as a widget but without a size), have no widget family
   const g = S.grid(config.widgetFamily || "large");

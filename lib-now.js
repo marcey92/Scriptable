@@ -9,9 +9,6 @@ const TITLE = "Inbox";
 const MAIL_URL = "message://";   // tapping the Inbox opens the Mail app
 const HIDE_DELIVERED_AFTER_H = 48;
 const STALE_MIN = 90;      // the feed counts as stale when Hermes last ran longer ago than this
-const CHAR_W = 6.4;         // average width of one character at the row text size, to size the title column
-const TITLE_MAX = 0.45;     // the title column never takes more than this share of the row after the time
-const COL_GAP = 10;         // space between the title and detail columns
 
 // ---- cache: the last good copy of both feeds, so the widget still draws when the server can't be reached ----
 const fm = FileManager.local();
@@ -168,32 +165,6 @@ function isStale(data) {
   return !data.updated || Date.now() - data.updated > STALE_MIN * 60 * 1000;
 }
 
-// `rows` lines of items under a header that is already drawn (the Hermes widget; the overview uses
-// drawTimetable).
-// medium and large: time or date, text (starred ones begin with ★), status. small: no time, a short status.
-function drawRows(w, innerW, rows, data, small = false, empty = "Nothing going on") {
-  if (data.error || data.rejected) {
-    S.row(w, innerW, [{ text: data.error || "Token rejected. Run in Scriptable to re-enter" }]);
-    return;
-  }
-  const list = items(data);
-  const shown = pick(list, rows);
-  const detail = it => (small ? it.short : it.long);
-  const title = it => (it.star ? "★ " : "") + it.name;
-  // three columns: time, title, detail. The title column is as wide as the longest title shown (up to
-  // TITLE_MAX of the space after the time), so every detail starts at the same place; text is cut off with "…"
-  const lead = small ? 0 : S.TIME_W;
-  const titleW = Math.min(Math.floor((innerW - lead) * TITLE_MAX), Math.ceil(Math.max(0, ...shown.map(it => title(it).length)) * CHAR_W) + COL_GAP);
-  if (!list.length) S.row(w, innerW, [{ text: data.noData ? "No data" : empty }]);
-  shown.forEach((it, i) => {
-    if (i > 0) w.addSpacer(S.ROW_GAP);
-    const cells = [];
-    if (!small) cells.push({ text: whenText(it.when), w: S.TIME_W, mono: true });
-    cells.push({ text: title(it), w: titleW }, { text: detail(it), w: innerW - lead - titleW });
-    S.row(w, innerW, cells);
-  });
-}
-
 // the Inbox as timetable rows for the overview: day | time | sender | detail. The weekday names an item
 // within the last 6 days, shown only when it changes; older items show their date in the time column.
 function timetableRows(data, n) {
@@ -214,16 +185,16 @@ function timetableRows(data, n) {
   }
   return rows;
 }
-function drawTimetable(w, W, data, n) {
-  if (data.error || data.rejected) {
-    S.gRow(w, W, [{ text: "", w: S.G.KEY }, { text: data.error || "Token rejected. Run in Scriptable to re-enter" }]);
-    return;
-  }
+// `small`: a small widget's two columns, time | who (no room for the day or the detail)
+function drawTimetable(w, W, data, n, empty = "Nothing going on", small = false) {
+  const note = text => S.gRow(w, W, small ? [{ text }] : [{ text: "", w: S.G.KEY }, { text }]);
+  if (data.error || data.rejected) { note(data.error || "Token rejected. Run in Scriptable to re-enter"); return; }
   const rows = timetableRows(data, n);
-  if (!rows.length) { S.gRow(w, W, [{ text: "", w: S.G.KEY }, { text: data.noData ? "No data" : "Nothing going on" }]); return; }
+  if (!rows.length) { note(data.noData ? "No data" : empty); return; }
   for (const r of rows) {
-    S.gRow(w, W, [{ text: r.day, w: S.G.D, font: S.F.key }, { text: r.time, w: S.G.T, font: S.F.mono },
-      { text: (r.star ? "★ " : "") + r.who, w: S.G.W1, font: S.F.key }, { text: r.what }]);
+    const who = { text: (r.star ? "★ " : "") + r.who, font: S.F.key };
+    S.gRow(w, W, small ? [{ text: r.time, w: S.G.T, font: S.F.mono }, who]
+      : [{ text: r.day, w: S.G.D, font: S.F.key }, { text: r.time, w: S.G.T, font: S.F.mono }, { ...who, w: S.G.W1 }, { text: r.what }]);
   }
 }
 
@@ -233,4 +204,4 @@ async function token() {
   return config.runsInWidget ? null : askToken("Paste the read token for the widget feed. It is stored in the iPhone Keychain.");
 }
 
-module.exports = { timetableRows, drawTimetable, TITLE, MAIL_URL, KEY, Rejected, fetchFeed, whenText, askToken, token, load, items, pick, headRight, isStale, drawRows };
+module.exports = { timetableRows, drawTimetable, TITLE, MAIL_URL, KEY, Rejected, fetchFeed, whenText, askToken, token, load, items, pick, headRight, isStale };

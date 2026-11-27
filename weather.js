@@ -4,7 +4,6 @@ const TITLE = "Weather";
 const PLACE = null;         // fixed place, e.g. { name: "London", lat: 51.5072, lon: -0.1276 }; null = where you are
 const STEP = 3;             // hours between rows
 const UNITS = "celsius";    // or "fahrenheit"
-const TEMP_W = 34;
 const RAIN_W = 40;
 const WIND_W = 76;          // wind column, e.g. "14 mph", or "14–35 mph" when gusty (room for two-digit gusts)
 const GUST_FROM = 25;       // gusts are shown from this many mph up...
@@ -122,34 +121,29 @@ function uvToday(hours) {
   return peak >= UV_FROM ? Math.round(peak) : null;
 }
 
-// ---- Home Screen widget: a timetable of hours ----
+// ---- Home Screen widget: a timetable of hours, set like the overview ----
+//   [Weather]  ━━━━━━━━━━━━━━━━━━━━━━  London · UV 5
+//   Now   12°   Partly cloudy     14 mph   20%
+// time | temperature | conditions | wind | rain chance; a small widget keeps time, temperature and rain
 function buildWidget(data) {
-  const w = S.widget();
-  const { innerW, availH, small } = S.metrics();
-
   if (data.error) {
-    S.header(w, innerW, TITLE, small ? null : S.dateLabel());
-    S.note(w, innerW, data.error);
-    if (data.detail) { w.addSpacer(S.ROW_GAP); S.note(w, innerW, data.detail); }
+    const { w, g } = S.board(TITLE, S.dateLabel());
+    S.gRow(w, g.W, [{ text: data.error }]);
+    if (data.detail) S.gRow(w, g.W, [{ text: data.detail }]);
     return S.finish(w);
   }
-
   // the place, plus the UV peak still to come today when it's worth knowing ("London · UV 5")
   const uv = uvToday(data.hours);
-  const place = data.place.name || (small ? null : S.dateLabel());
-  S.header(w, innerW, TITLE, uv && !small ? [place, `UV ${uv}`].filter(Boolean).join(" · ") : place);
-  const rows = pick(data.hours, Math.min(S.rowsFor(availH, 1), Math.ceil(24 / STEP)));   // never past 24 hours
-  if (!rows.length) S.note(w, innerW, "No forecast available");
-  rows.forEach((r, i) => {
-    if (i > 0) w.addSpacer(S.ROW_GAP);
-    S.row(w, innerW, [
-      { text: r.label, w: S.TIME_W, mono: true },
-      { text: deg(r.temp), w: TEMP_W, mono: true },
-      { text: small ? "" : words(r.code) },
-      ...(small ? [] : [{ text: mph(r.wind, r.gust), w: WIND_W, mono: true, right: true }]),
-      { text: pct(r.rain), w: RAIN_W, mono: true, right: true },
-    ]);
-  });
+  const place = data.place.name || S.dateLabel();
+  const { w, g, rows: n } = S.board(TITLE, uv ? [place, `UV ${uv}`].filter(Boolean).join(" · ") : place);
+  const rows = pick(data.hours, Math.min(n, Math.ceil(24 / STEP)));   // never past 24 hours
+  if (!rows.length) S.gRow(w, g.W, [{ text: "No forecast available" }]);
+  for (const r of rows) {
+    S.gRow(w, g.W, g.small
+      ? [{ text: r.label, w: S.G.T, font: S.F.mono }, { text: deg(r.temp), w: S.G.D, font: S.F.mono }, { text: pct(r.rain), font: S.F.mono, right: true }]
+      : [{ text: r.label, w: S.G.T, font: S.F.mono }, { text: deg(r.temp), w: S.G.D, font: S.F.mono }, { text: words(r.code) },
+         { text: mph(r.wind, r.gust), w: WIND_W, font: S.F.mono, right: true }, { text: pct(r.rain), w: RAIN_W, font: S.F.mono, right: true }]);
+  }
   return S.finish(w);
 }
 
