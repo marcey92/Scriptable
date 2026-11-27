@@ -1,13 +1,8 @@
-// lib-calendar.js: calendar loading and drawing (calendar-list.js and overview.js load it). Not a widget by itself.
+// lib-calendar.js: calendar loading, the overview's timetable and the Hermes event sync (overview.js and hermes.js load it). Not a widget by itself.
 const S = importModule("swiss");
 
 const SHOW_ALL_DAY = false;   // include all-day events (shown with a dash instead of a time)
 const LOOK_AHEAD = 7;         // how many days ahead to search for events
-
-function dayTitle(offset, d, label) {
-  const day = offset === 0 ? "Today" : offset === 1 ? "Tomorrow" : S.WD[d.getDay()];
-  return label ? `${label} · ${day}` : day;
-}
 
 // ---- calendar ----
 // returns { days: [{ offset, date, events }] }, or { error } when something is missing
@@ -41,45 +36,6 @@ async function loadDays(names, allDay = SHOW_ALL_DAY, lookAhead = LOOK_AHEAD, hi
     }
     return { days };
   } catch (e) { return { error: "Open Scriptable to allow calendar access" }; }
-}
-
-// ---- Home Screen widget ----
-function buildWidget(result, label) {
-  const w = S.widget();
-  w.url = "calshow://";   // tapping opens the Calendar app
-  const { innerW, availH, large } = S.metrics();
-  const maxDays = large ? 4 : 2;
-
-  const line = (left, text, colour) =>
-    S.row(w, innerW, [{ text: left, w: S.TIME_W, mono: true }, { text }], colour);
-
-  // up to `rows` lines of events: whatever doesn't fit is left off, without a "+N more" line
-  const list = (events, rows) => {
-    events.slice(0, Math.max(1, rows)).forEach((e, i) => {
-      if (i > 0) w.addSpacer(S.ROW_GAP);
-      line(e.isAllDay ? "—" : S.timeLabel(e.startDate), e.title, S.FG);
-    });
-  };
-
-  const days = result.days || [];
-  if (result.error || days.length === 0) {
-    S.header(w, innerW, dayTitle(0, S.dayStart(0), label), S.dayMonth());
-    S.note(w, innerW, result.error || "Nothing this week", S.TIME_W);
-  } else {
-    const show = days.slice(0, maxDays);
-    const k = show.length;
-    let left = S.rowsFor(availH, k);   // rows that fit once the headers are paid for
-    show.forEach((d, i) => {
-      if (i > 0) w.addSpacer(S.SECTION_GAP);
-      const after = k - i - 1;         // sections still to come
-      const rows = i === k - 1 ? left : Math.min(d.events.length, left - after);
-      S.header(w, innerW, dayTitle(d.offset, d.date, label), S.dayMonth(d.date));   // the title already names the day
-      list(d.events, rows);
-      left -= Math.min(rows, d.events.length);
-    });
-  }
-
-  return S.finish(w);
 }
 
 // ---- the overview's calendar, set as a timetable: day | time | what ----
@@ -220,30 +176,4 @@ async function syncFromFeed(token) {
   return { added, updated, failed };
 }
 
-// ---- Lock Screen widgets ----
-// upcoming events as short text lines, e.g. "14:00 Dentist", "Tmrw 09:00 Standup", "Sat 11:00 Brunch"
-function lockLines(result, max) {
-  if (result.error) return [result.error];
-  const out = [];
-  for (const d of result.days) {
-    const prefix = d.offset === 0 ? "" : d.offset === 1 ? "Tmrw " : S.WD[d.date.getDay()].slice(0, 3) + " ";
-    for (const e of d.events) {
-      out.push(`${prefix}${e.isAllDay ? "—" : S.timeLabel(e.startDate)} ${e.title}`);
-      if (out.length === max) return out;
-    }
-  }
-  return out.length ? out : ["Nothing this week"];
-}
-
-// rectangular: the next three events
-function buildLockRect(result) {
-  const w = S.lockWidget();
-  lockLines(result, 3).forEach((text, i) => {
-    if (i > 0) w.addSpacer(3);
-    S.lockText(w, text);
-  });
-  w.addSpacer();
-  return w;
-}
-
-module.exports = { hiddenCalendars, chooseCalendars, syncFromFeed, lastSyncFailure, loadDays, dayTitle, timetableRows, drawTimetable, buildWidget, buildLockRect, lockLines };
+module.exports = { hiddenCalendars, chooseCalendars, syncFromFeed, lastSyncFailure, loadDays, timetableRows, drawTimetable };

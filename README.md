@@ -4,9 +4,6 @@ Scriptable widgets for iOS in one fixed style: a title, a hairline rule, then ro
 
 | Script | What it shows | Sizes |
 | --- | --- | --- |
-| `habit-grid.js` | One row of boxes per habit; tap a row to tick today, tap a name to fix earlier days | Medium, large, Lock Screen |
-| `calendar-list.js` | The next days that have events | Small, medium, large, Lock Screen |
-| `battery.js` | Charge as a figure and a bar of boxes | Small, medium, Lock Screen |
 | `weather.js` | Hours, temperature, conditions, wind (with gusts when strong), rain chance; UV next to the place from 3 up | Small, medium, large, Lock Screen |
 | `orders.js` | "Inbox": one list of parcels and important emails, urgent ones get a ★ (from the misc server) | Small, medium, large, Lock Screen |
 | `hermes.js` | What Hermes did on its own, one line each; header shows when it last ran. A failed calendar add on the phone shows as a ★ line | Small, medium, large |
@@ -14,7 +11,7 @@ Scriptable widgets for iOS in one fixed style: a title, a hairline rule, then ro
 | `reminders.js` | What's left in Apple Reminders: overdue, today, later, then undated. Tap a line to mark it done, the title to open Reminders | Small, medium, large, Lock Screen |
 | `overview.js` | Habits, calendar and Inbox set like a timetable on a 15 pt grid: a day ruler over 13 days of habits, then day / time / what for two weeks of events and the Inbox (at most 5). Tap a habit's boxes to tick today, its name to fix earlier days, the date to refresh, the Calendar sign to choose calendars | Large |
 | `swiss.js` | The shared style. Not a widget; the others load it | |
-| `lib-calendar.js`, `lib-habits.js`, `lib-now.js` | The calendar, habit and Inbox logic, shared by their own widget and `overview.js`. Not widgets | |
+| `lib-calendar.js`, `lib-habits.js`, `lib-now.js` | The calendar, habit and Inbox logic, shared by `overview.js`, `orders.js` and `hermes.js`. Not widgets | |
 | `update.js` | Pulls the latest scripts from this repo | Run in the app |
 
 ## The style lives in one file
@@ -28,9 +25,9 @@ Every widget starts with `importModule("swiss")`. Colours, type sizes, margins, 
 3. Add a Scriptable widget to the Home Screen or Lock Screen and pick the script.
 4. Scriptable 1.8 has no "When Interacting" setting: taps on a widget either follow a link the script sets (opening Scriptable, Calendar or Mail) or, for the overview's date row, redraw the widget in place.
 
-The habit list is `HABITS` at the top of `lib-habits.js`; the habit widget and the overview both follow it.
+The habit list is `HABITS` at the top of `lib-habits.js`; the overview follows it.
 
-Missed a day? Tap the habit's **name** on the habit widget or the overview. A list opens with that habit's last two weeks (Today, Yesterday, Wed 21.10, …), ✓ on the ticked ones; tap a day to tick or untick it, then Done. Tapping the boxes still ticks today. Habits turn over to a new day at 4am, so a tick at 1am counts for the evening before.
+Missed a day? Tap the habit's **name** on the overview. A list opens with that habit's last two weeks (Today, Yesterday, Wed 21.10, …), ✓ on the ticked ones; tap a day to tick or untick it, then Done. Tapping the boxes still ticks today. Habits turn over to a new day at 4am, so a tick at 1am counts for the evening before.
 
 Ticking in place (without Scriptable opening) isn't possible yet: Scriptable 1.8's buttons and toggles never tell the script what was tapped (`args.widgetAction` is always null), so the only tap that works inside the widget is a refresh.
 
@@ -55,16 +52,11 @@ Tapping a line opens Scriptable with "Mark as done" or "Open Reminders", then dr
 
 ## Events from Hermes
 
-Each time the calendar widget or the overview refreshes, it fetches `https://misc.mrdrr.uk/widget/api/calendar` (same read token as the Inbox) and adds Hermes's events to the default calendar (`SYNC_CALENDAR` in `lib-calendar.js` picks another). An event Hermes changes is updated in place; one already added is skipped. Nothing is ever deleted. What it remembers is in `swiss-calendar-sync.json` in Scriptable's local folder.
+Each time the overview refreshes, it fetches `https://misc.mrdrr.uk/widget/api/calendar` (same read token as the Inbox) and adds Hermes's events to the default calendar (`SYNC_CALENDAR` in `lib-calendar.js` picks another). An event Hermes changes is updated in place; one already added is skipped. Nothing is ever deleted. What it remembers is in `swiss-calendar-sync.json` in Scriptable's local folder.
 
 ## Google Calendar
 
-`calendar-list.js` reads whatever calendars the iPhone's Calendar app has. To show Google events:
-
-1. Settings → Apps → Calendar → Calendar Accounts → Add Account → Google.
-2. Add a second `calendar-list.js` widget and set its Parameter to `Google: you@gmail.com` (the word before the colon becomes the header label; after it, the calendar names, comma-separated).
-
-Run the script in the app to see the exact calendar names in the log.
+The overview reads whatever calendars the iPhone's Calendar app has. To show Google events, add the account (Settings → Apps → Calendar → Calendar Accounts → Add Account → Google). To leave calendars out, tap the overview's Calendar sign.
 
 ## Check before pushing
 
