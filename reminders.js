@@ -1,11 +1,11 @@
 const S = importModule("swiss");
 
-// "Reminders": what's left to do from Apple Reminders, set like the overview's timetable:
+// "Reminders": what's left to do today from Apple Reminders, set like the overview's timetable.
+// A reminder with a date only shows up on its day (and stays, as LATE, until it's done):
 //   [Reminders]  ━━━━━━━━━━━━━━━━━━━━  1 overdue
 //   LATE   24.11  Renew passport      <- overdue: LATE, then its date (or time, if due earlier today)
 //   FRI    —      Buy batteries       <- today: the weekday, "—" when it has no time
 //          14:00  Call landlord
-//   SUN    09:00  Book dentist        <- later: the weekday within a week, the date beyond
 //                 Fix bike light      <- no due date (newest first, after the dated ones)
 // Tap a line to mark it done (Scriptable opens, asks, and closes); tap the sign to open Reminders.
 // The widget's Parameter field can name lists to show, e.g. "Shopping, Home"; empty = every list.
@@ -34,7 +34,7 @@ async function load(names = lists()) {
       const overdue = !!due && (timed ? due < now : due < S.dayStart(0));
       return { id: r.identifier, title: r.title || "", due, timed, overdue, today: !!due && due < end && !overdue,
                created: r.creationDate ? r.creationDate.getTime() : 0 };
-    }).filter(it => UNDATED || it.due);
+    }).filter(it => it.due ? it.overdue || it.today : UNDATED);   // nothing from days still to come
     items.sort((a, b) => (!a.due - !b.due) || (a.due && b.due ? a.due - b.due : b.created - a.created));
     return { items };
   } catch (e) { return { error: "Open Scriptable to allow Reminders access" }; }
