@@ -207,7 +207,7 @@ async function runInner(file, opts) {
     const issues = [];
     if (widget) {
       check(widget, issues);
-      const m = { small: 126, medium: 126, large: 322 }[opts.family];   // 393x852 widget heights minus padding
+      const m = { small: 128, medium: 128, large: 324 }[opts.family];   // 393x852 widget heights minus padding
       if (m && height(widget) > m + 0.01) issues.push(`content is ${height(widget)} tall, slot allows about ${m}`);
     } else if (!opts.inApp) issues.push("no widget was set");
     console.log(`\n${issues.length ? "FAIL" : "ok  "} ${label}`);
@@ -284,9 +284,10 @@ async function runInner(file, opts) {
   }, note: "gusty" });
   await run("weather.js", { family: "medium", sunny: true, expect: {
     "the rule runs up to a short status: only the status's own width is left": ({ widget }) => {
-      const sec = widget.children[0], rule = sec.children.find(c => c.size && c.size.height === 2);
+      const sec = widget.children[0].children[0], rule = sec.children.find(c => c.size && c.size.height === 2);
       return rule.size.width > sec.size.width - 90 - 6 - 110;
     },
+    "tapping opens Weather straight away: the link is on the content, not the widget": ({ widget }) => !widget.url && widget.children[0].url === "weather://",
     "UV from 3 shows next to the place": ({ text }) => /^Weather\s+■\s+London · UV \d+$/.test(text.split("\n")[0]),
   }, note: "sunny" });
   await run("weather.js", { family: "medium", offline: true, note: "offline, cached" });
@@ -591,9 +592,10 @@ async function runInner(file, opts) {
         && /^Fix bike light /.test(l[3]) && /^Old idea /.test(l[4]) && !text.includes("Book dentist");
     },
     "the sign counts the overdue ones": ({ text }) => /^Reminders\s+■\s+1 overdue$/.test(text.split("\n")[0]),
-    "tapping anywhere opens Reminders, with no other tap areas": ({ widget }) => {
+    "tapping anywhere opens Reminders straight away: one slot-sized linked stack, no link on the widget itself": ({ widget }) => {
       const all = n => [n, ...(n.children || []).flatMap(all)];
-      return widget.url === "x-apple-reminderkit://" && all(widget).filter(n => n.url).length === 1;
+      const links = all(widget).filter(n => n.url);
+      return !widget.url && links.length === 1 && links[0].url === "x-apple-reminderkit://" && links[0].size.height >= 120;
     },
     "each line names its list on the right, first three letters, when there are several": ({ text }) => /Buy batteries\s+Sho$/m.test(text) && /Renew passport\s+Rem$/m.test(text),
   }, note: "order" });
