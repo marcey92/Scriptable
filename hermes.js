@@ -16,7 +16,7 @@ function readCache() {
 async function load(token) {
   const cache = readCache();
   const fallback = cache ? { items: cache.items || [], updated: cache.updated || null } : { items: [], updated: null, noData: true };
-  if (!token) return { ...fallback, error: "Run the Inbox widget in Scriptable once to set the token" };
+  if (!token) return { ...fallback, error: "Run the overview in Scriptable once to set the token" };
   try {
     const json = await N.fetchFeed("activity", token);
     const t = Date.parse(json.updated || "");

@@ -1,4 +1,4 @@
-// lib-now.js: the "Inbox" list (orders.js and overview.js load it). Not a widget by itself.
+// lib-now.js: the "Inbox" feed and its drawing (overview.js and hermes.js load it). Not a widget by itself.
 const S = importModule("swiss");
 
 // One list of what is going on: parcels and important emails, read from Marcel's misc server
@@ -116,13 +116,12 @@ function whenText(ms) {
   return `${S.p(d.getDate())}.${S.p(d.getMonth() + 1)}`;
 }
 
-// the rows to show: { star, name, long, short, lock, when, done }.
+// the rows to show: { star, name, long, short, when, done }.
 // From the now feed: in Hermes's order, as Hermes wrote them. From the older pair: built here, newest first.
 function items(data) {
   if (data.items) {
     return data.items.map(i => ({
       star: !!i.star, name: i.title || "", long: i.detail || "", short: i.short || "",
-      lock: [i.title, i.short || i.detail].filter(Boolean).join(" · "),
       when: new Date(i.when).getTime() || 0, done: false,
     }));
   }
@@ -138,7 +137,6 @@ function items(data) {
       name,
       long: eta ? `${label} · ${eta}` : label,
       short: SHORT[o.status] || label,
-      lock: `${name} · ${SHORT[o.status] || label}`,
       when: new Date(o.last_event).getTime() || 0,
       done: isDelivered(o),
     });
@@ -146,7 +144,6 @@ function items(data) {
   for (const i of data.important) {
     out.push({
       star: true, name: i.from || "Email", long: i.subject || "", short: "",
-      lock: [i.from, i.subject].filter(Boolean).join(" · "),
       when: new Date(i.received).getTime() || 0, done: false,
     });
   }
@@ -171,24 +168,8 @@ function isStale(data) {
   return !data.updated || Date.now() - data.updated > STALE_MIN * 60 * 1000;
 }
 
-// ---- Home Screen widget ----
-function buildWidget(data) {
-  const w = S.widget();
-  const { innerW, availH, small } = S.metrics();
-
-  if (data.error || data.rejected) {
-    S.header(w, innerW, TITLE, null);
-    drawRows(w, innerW, 1, data);
-    return S.finish(w);
-  }
-
-  S.header(w, innerW, TITLE, headRight(data));
-  drawRows(w, innerW, S.rowsFor(availH, 1), data, small);
-  return S.finish(w);
-}
-
-// `rows` lines of items under a header that is already drawn (the Inbox and Hermes widgets; the overview
-// uses drawTimetable).
+// `rows` lines of items under a header that is already drawn (the Hermes widget; the overview uses
+// drawTimetable).
 // medium and large: time or date, text (starred ones begin with ★), status. small: no time, a short status.
 function drawRows(w, innerW, rows, data, small = false, empty = "Nothing going on") {
   if (data.error || data.rejected) {
@@ -252,31 +233,4 @@ async function token() {
   return config.runsInWidget ? null : askToken("Paste the read token for the widget feed. It is stored in the iPhone Keychain.");
 }
 
-// ---- Lock Screen ----
-function lockLine(it) {
-  return `${it.star ? "★ " : ""}${it.lock}`;
-}
-function lockLines(data, max) {
-  if (data.error) return [data.error];
-  const lines = pick(items(data), max).map(lockLine);
-  return lines.length ? lines : ["Nothing going on"];
-}
-function buildLockRect(data) {
-  const w = S.lockWidget();
-  lockLines(data, 3).forEach((text, i) => {
-    if (i > 0) w.addSpacer(3);
-    S.lockText(w, text);
-  });
-  w.addSpacer();
-  return w;
-}
-function activeCount(data) {
-  return data.error ? "–" : String(items(data).filter(i => !i.done).length);
-}
-function inlineLine(data) {
-  if (data.error) return data.error;
-  const stars = items(data).filter(i => i.star).length;
-  return `${activeCount(data)} going on` + (stars ? ` · ${stars} ★` : "");
-}
-
-module.exports = { timetableRows, drawTimetable, TITLE, MAIL_URL, KEY, Rejected, fetchFeed, whenText, askToken, token, load, items, pick, headRight, isStale, drawRows, buildWidget, buildLockRect, activeCount, inlineLine };
+module.exports = { timetableRows, drawTimetable, TITLE, MAIL_URL, KEY, Rejected, fetchFeed, whenText, askToken, token, load, items, pick, headRight, isStale, drawRows };
