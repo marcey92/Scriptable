@@ -114,9 +114,11 @@ S.gSection = (parent, W, label, status, signUrl) => {
   const row = parent.addStack(); row.size = new Size(W, S.M); row.centerAlignContent(); row.spacing = 0;
   const sign = S.gSign(row, label);
   if (signUrl) sign.url = signUrl;   // the sign can do something of its own (the Calendar sign picks calendars)
-  const statusW = status ? 111 : 0;
-  const rule = row.addStack(); rule.size = new Size(W - S.G.KEY - statusW, 2); rule.backgroundColor = S.FG;
-  if (status) { row.addSpacer(6); S.gCell(row, { text: status, w: 105, font: S.F.key, right: true }, S.M); }
+  // the status is sized to its text, so the rule runs right up to it ("London" leaves a long rule).
+  // 6.4 pt a character covers semibold 11 pt with room to spare: a short guess would cut the text.
+  const textW = status ? Math.min(W - S.G.KEY - 30, Math.ceil(String(status).length * 6.4) + 4) : 0;
+  const rule = row.addStack(); rule.size = new Size(W - S.G.KEY - (status ? textW + 6 : 0), 2); rule.backgroundColor = S.FG;
+  if (status) { row.addSpacer(6); S.gCell(row, { text: status, w: textW, font: S.F.key, right: true }, S.M); }
   return row;
 };
 
