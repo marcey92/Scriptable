@@ -14,7 +14,7 @@ const N = importModule("lib-now");
 // widget (a tap action; without them it opens the habit menu); the Calendar sign chooses calendars, the
 // events open Calendar; the Inbox opens Mail. Tap areas never sit inside each other: the outer one wins.
 const CALENDAR_URL = "calshow://";
-const LOOK_AHEAD = 14;  // days of calendar: beyond a week, days are named by date
+const LOOK_AHEAD = 31;  // days of calendar to fill the rows from: beyond a week, days are named by date
 const INBOX_MAX = 5;   // the Inbox never shows more than this many items; the calendar gets the rest
 
 function build(cal, habits, now) {
