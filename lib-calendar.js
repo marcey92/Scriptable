@@ -66,7 +66,7 @@ function timetableRows(result) {
 
 // the first `n` timetable rows into a stack W wide
 function drawTimetable(w, W, rows, n) {
-  if (!rows.length) { S.gRow(w, W, [{ text: "", w: S.G.KEY }, { text: "Nothing in the next two weeks" }]); return; }
+  if (!rows.length) { S.gRow(w, W, [{ text: "", w: S.G.KEY }, { text: "Nothing in the next month" }]); return; }
   for (const r of rows.slice(0, n)) {
     S.gRow(w, W, [{ text: r.day, w: S.G.D, font: S.F.key }, { text: r.time, w: S.G.T, font: S.F.mono }, { text: r.title }]);
   }
