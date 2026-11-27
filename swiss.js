@@ -67,10 +67,20 @@ S.grid = (as) => {
 };
 // a widget set on the grid, opened by its name as a station sign (the overview's look):
 //   [Weather]  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  London · UV 5
-// returns { w, g, rows }: rows = grid rows left under the sign. The status is left off on a small widget.
-S.board = (label, status, signUrl) => {
-  const w = S.widget();
+// returns { w, g, rows }: draw into w, then return S.finish(w). rows = grid rows left under the sign.
+// The status is left off on a small widget.
+// `tapUrl` opens another app straight away: the content sits in one slot-sized stack carrying the link.
+// (A link on the widget itself always opens Scriptable first, which then passes it on; a link on a
+// stack goes straight there. Seen on the phone: the overview's Calendar and Inbox open directly.)
+const owners = new Map();   // a board's content stack -> its widget, for S.finish
+S.board = (label, status, signUrl, tapUrl) => {
+  const widget = S.widget();
   const g = S.grid();
+  let w = widget;
+  if (tapUrl) {
+    w = widget.addStack(); w.layoutVertically(); w.size = new Size(g.W, g.H); w.url = tapUrl;
+    owners.set(w, widget);
+  }
   S.gSection(w, g.W, label, g.small ? null : status, signUrl);
   return { w, g, rows: g.rows - 1 };
 };
@@ -141,7 +151,9 @@ S.box = (parent, size, on, lock = false) => {
 // push content to the top edge and set the refresh interval
 S.finish = w => {
   w.addSpacer();
-  return S.refresh(w);
+  const widget = owners.get(w);   // a board's content stack: its widget gets the closing spacer too
+  if (widget) widget.addSpacer();
+  return S.refresh(widget || w);
 };
 S.refresh = w => {
   w.refreshAfterDate = new Date(Date.now() + S.REFRESH_MIN * 60 * 1000);

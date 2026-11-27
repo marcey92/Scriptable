@@ -75,7 +75,7 @@ function timeText(it) {
 }
 
 function buildWidget(data) {
-  const { w, g, rows } = S.board(TITLE, headRight(data));
+  const { w, g, rows } = S.board(TITLE, headRight(data), null, REMINDERS_URL);
   const note = text => S.gRow(w, g.W, g.small ? [{ text }] : [{ text: "", w: S.G.KEY }, { text }]);
   if (data.error) { note(data.error); return S.finish(w); }
   if (!data.items.length) { note("Nothing to do"); return S.finish(w); }
@@ -115,7 +115,9 @@ const widget = family === "accessoryRectangular" ? buildLockRect(data)
   : family === "accessoryCircular" ? S.lockCircle(String(dueCount(data)))
   : family === "accessoryInline" ? S.lockInline(lockLines(data, 1)[0])
   : buildWidget(data);
-widget.url = REMINDERS_URL;   // tapping anywhere opens Reminders
+// tapping anywhere opens Reminders: on the Home Screen the link is on the content (S.board), which opens it
+// without Scriptable first; the Lock Screen only takes a link on the whole widget
+if (family && family.startsWith("accessory")) widget.url = REMINDERS_URL;
 S.refresh(widget);
 if (config.runsInWidget) Script.setWidget(widget);
 else await widget.presentMedium();   // preview when run inside the app

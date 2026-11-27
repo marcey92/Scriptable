@@ -127,7 +127,7 @@ function uvToday(hours) {
 // time | temperature | conditions | wind | rain chance; a small widget keeps time, temperature and rain
 function buildWidget(data) {
   if (data.error) {
-    const { w, g } = S.board(TITLE, S.dateLabel());
+    const { w, g } = S.board(TITLE, S.dateLabel(), null, TAP_URL);
     S.gRow(w, g.W, [{ text: data.error }]);
     if (data.detail) S.gRow(w, g.W, [{ text: data.detail }]);
     return S.finish(w);
@@ -135,7 +135,7 @@ function buildWidget(data) {
   // the place, plus the UV peak still to come today when it's worth knowing ("London · UV 5")
   const uv = uvToday(data.hours);
   const place = data.place.name || S.dateLabel();
-  const { w, g, rows: n } = S.board(TITLE, uv ? [place, `UV ${uv}`].filter(Boolean).join(" · ") : place);
+  const { w, g, rows: n } = S.board(TITLE, uv ? [place, `UV ${uv}`].filter(Boolean).join(" · ") : place, null, TAP_URL);
   const rows = pick(data.hours, Math.min(n, Math.ceil(24 / STEP)));   // never past 24 hours
   if (!rows.length) S.gRow(w, g.W, [{ text: "No forecast available" }]);
   for (const r of rows) {
@@ -192,7 +192,9 @@ const widget = family === "accessoryRectangular" ? buildLockRect(data)
   : family === "accessoryInline" ? S.lockInline(nowLine(data))
   : buildWidget(data);
 S.refresh(widget);
-if (TAP_URL) widget.url = TAP_URL;
+// Home Screen: the link is on the content (S.board), so Weather opens without Scriptable first. The Lock
+// Screen only takes a link on the whole widget.
+if (TAP_URL && family && family.startsWith("accessory")) widget.url = TAP_URL;
 
 if (config.runsInWidget) Script.setWidget(widget);
 else await widget.presentMedium();   // preview when run inside the app
