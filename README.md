@@ -7,7 +7,7 @@ Scriptable widgets for iOS in one fixed style, like a station departure board: e
 | `weather.js` | Hours, temperature, conditions, wind (with gusts when strong), rain chance; UV next to the place from 3 up | Small, medium, large, Lock Screen |
 | `hermes.js` | What Hermes did on its own, one line each; header shows when it last ran. A failed calendar add on the phone shows as a ★ line | Small, medium, large |
 | `quotes.js` | A mock-motivational work quote, new each day; each weekday has its own | Lock Screen, small, medium |
-| `reminders.js` | What's left in Apple Reminders: overdue, today, later, then undated. Tap a line to mark it done, the title to open Reminders | Small, medium, large, Lock Screen |
+| `reminders.js` | What's left in Apple Reminders today: overdue, today, then undated, with each one's list. Tap to open Reminders | Small, medium, large, Lock Screen |
 | `overview.js` | Habits, calendar and Inbox set like a timetable on a 15 pt grid: a day ruler over 13 days of habits, then day / time / what for as many events as fit (up to a month ahead) and the Inbox (at most 5). Tap a habit's boxes to tick today, its name to fix earlier days, the date to refresh, the Calendar sign to choose calendars | Large |
 | `swiss.js` | The shared style. Not a widget; the others load it | |
 | `lib-calendar.js`, `lib-habits.js`, `lib-now.js` | The calendar, habit and Inbox logic, shared by `overview.js` and `hermes.js`. Not widgets | |
@@ -46,7 +46,7 @@ It shows up to 5 items, one line each: the day, the time (or the date for anythi
 
 One line per reminder, only on its day: reminders due on later days stay hidden until then. The time column shows the date when it's overdue, the time when it's due today ("—" for today without a time), and nothing for reminders without a due date, which come last, newest first. The header says how many are overdue, or due today. To show only some lists, put their names in the widget's Parameter field, comma-separated (`Shopping, Home`).
 
-Tapping a line opens Scriptable with "Mark as done" or "Open Reminders", then drops back to the Home Screen; the widget shows the change when it next redraws. Tapping the title opens Reminders. On the Lock Screen: the next three dated reminders (rectangular), the number due today or overdue (circular), the first one (inline).
+When the reminders shown come from more than one list, each line names its list on the right. Tapping the widget opens Reminders. On the Lock Screen: the next three dated reminders (rectangular), the number due today or overdue (circular), the first one (inline).
 
 ## Events from Hermes
 

@@ -8,7 +8,6 @@ let failures = 0;
 let feedCalls = null;
 const savedEvents = [];   // events scripts created with CalendarEvent.save(), kept across runs
 let nextId = 1;
-const completed = [], opened = [];   // reminders marked done, URLs opened
 const files = {};   // fake Scriptable documents folder
 class Text {
   constructor(t) { this.text = t; }
@@ -148,15 +147,13 @@ async function runInner(file, opts) {
       forReminders: async () => [{ title: "Reminders" }, { title: "Shopping" }],
     },
     Reminder: class {
-      save() { completed.push(this.title); }
       static async allIncomplete(cals = []) {
         if (opts.noReminders) throw new Error("denied");
         const names = cals.map(c => c.title);
         return (opts.reminders || defaultReminders).filter(r => !names.length || names.includes(r.list))
-          .map(r => Object.assign(new g.Reminder(), r));
+          .map(r => Object.assign(new g.Reminder(), r, { calendar: { title: r.list } }));
       }
     },
-    Safari: { open: url => { opened.push(url); } },
     CalendarEvent: class {
       save() {
         if (opts.saveFails) throw new Error("not allowed");
@@ -590,15 +587,19 @@ async function runInner(file, opts) {
   await run("reminders.js", { family: "large", expect: {
     "overdue first (LATE, its date), then today (no time first, then by time), then undated newest first; nothing from later days": ({ text }) => {
       const l = text.split("\n").slice(1).map(x => x.replace(/\s+/g, " ").trim());
-      return /^LATE \d\d\.\d\d Renew passport$/.test(l[0]) && /^[A-Z]{3} — Buy batteries$/.test(l[1]) && /^([A-Z]{3} )?\d\d:\d\d Call landlord$/.test(l[2])
-        && l[3] === "Fix bike light" && l[4] === "Old idea" && !text.includes("Book dentist");
+      return /^LATE \d\d\.\d\d Renew passport /.test(l[0]) && /^[A-Z]{3} — Buy batteries /.test(l[1]) && /^([A-Z]{3} )?\d\d:\d\d Call landlord /.test(l[2])
+        && /^Fix bike light /.test(l[3]) && /^Old idea /.test(l[4]) && !text.includes("Book dentist");
     },
     "the sign counts the overdue ones": ({ text }) => /^Reminders\s+■\s+1 overdue$/.test(text.split("\n")[0]),
-    "each line links to marking it done, the sign opens Reminders": ({ widget }) =>
-      widget.children.filter(c => c.url && c.url.includes("?done=")).length === 5 && widget.children[0].children[0].url === "x-apple-reminderkit://",
+    "tapping anywhere opens Reminders, with no other tap areas": ({ widget }) => {
+      const all = n => [n, ...(n.children || []).flatMap(all)];
+      return widget.url === "x-apple-reminderkit://" && all(widget).filter(n => n.url).length === 1;
+    },
+    "each line names its list on the right when there are several": ({ text }) => /Buy batteries\s+Shopping$/m.test(text) && /Renew passport\s+Reminders$/m.test(text),
   }, note: "order" });
   await run("reminders.js", { family: "medium", param: "Shopping", expect: {
     "the Parameter picks the lists": ({ text }) => text.includes("Buy batteries") && !text.includes("Renew passport"),
+    "one list: no list column": ({ text }) => !/Buy batteries\s+Shopping/.test(text),
   }, note: "one list" });
   await run("reminders.js", { family: "medium", param: "Nope", expect: {
     "an unknown list says so": ({ text }) => text.includes("No list named Nope"),
@@ -606,12 +607,6 @@ async function runInner(file, opts) {
   await run("reminders.js", { family: "medium", reminders: [], expect: { "empty": ({ text }) => text.includes("Nothing to do") }, note: "empty" });
   await run("reminders.js", { family: "medium", noReminders: true, expect: { "no access": ({ text }) => text.includes("allow Reminders") }, note: "no access" });
   await run("reminders.js", { family: "accessoryCircular", expect: { "counts overdue and today": ({ text }) => text === "3" }, note: "count" });
-  await run("reminders.js", { inApp: true, query: { done: "r4" }, sheets: [0], expect: {
-    "tapping a line and choosing Mark as done completes that reminder": () => completed.length === 1 && completed[0] === "Book dentist",
-  }, note: "mark done" });
-  await run("reminders.js", { inApp: true, query: { done: "r4" }, sheets: [], expect: {
-    "cancel changes nothing": () => completed.length === 1,
-  }, note: "cancel" });
   await run("update.js", { inApp: true });
   console.log(`\n${failures ? failures + " failing" : "all passing"}`);
   process.exit(failures ? 1 : 0);
