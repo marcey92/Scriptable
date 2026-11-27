@@ -584,14 +584,14 @@ async function runInner(file, opts) {
   }
   for (const family of [...home, ...lock]) await run("reminders.js", { family });
   await run("reminders.js", { family: "large", expect: {
-    "overdue first (LATE, its date), then today (no time first, then by time), later, then undated newest first": ({ text }) => {
+    "overdue first (LATE, its date), then today (no time first, then by time), then undated newest first; nothing from later days": ({ text }) => {
       const l = text.split("\n").slice(1).map(x => x.replace(/\s+/g, " ").trim());
       return /^LATE \d\d\.\d\d Renew passport$/.test(l[0]) && /^[A-Z]{3} — Buy batteries$/.test(l[1]) && /^([A-Z]{3} )?\d\d:\d\d Call landlord$/.test(l[2])
-        && /^[A-Z]{3} 09:00 Book dentist$/.test(l[3]) && l[4] === "Fix bike light" && l[5] === "Old idea";
+        && l[3] === "Fix bike light" && l[4] === "Old idea" && !text.includes("Book dentist");
     },
     "the sign counts the overdue ones": ({ text }) => /^Reminders\s+■\s+1 overdue$/.test(text.split("\n")[0]),
     "each line links to marking it done, the sign opens Reminders": ({ widget }) =>
-      widget.children.filter(c => c.url && c.url.includes("?done=")).length === 6 && widget.children[0].children[0].url === "x-apple-reminderkit://",
+      widget.children.filter(c => c.url && c.url.includes("?done=")).length === 5 && widget.children[0].children[0].url === "x-apple-reminderkit://",
   }, note: "order" });
   await run("reminders.js", { family: "medium", param: "Shopping", expect: {
     "the Parameter picks the lists": ({ text }) => text.includes("Buy batteries") && !text.includes("Renew passport"),

@@ -44,7 +44,7 @@ It shows up to 5 items, one line each: the day, the time (or the date for anythi
 
 `reminders.js` reads Apple Reminders on the phone (no server). Run it once in Scriptable so iOS asks for Reminders access, then add a Scriptable widget and pick it.
 
-One line per reminder: the time column shows the date when it's overdue or due later, the time when it's due today ("—" for today without a time), and nothing for reminders without a due date, which come last, newest first. The header says how many are overdue, or due today. To show only some lists, put their names in the widget's Parameter field, comma-separated (`Shopping, Home`).
+One line per reminder, only on its day: reminders due on later days stay hidden until then. The time column shows the date when it's overdue, the time when it's due today ("—" for today without a time), and nothing for reminders without a due date, which come last, newest first. The header says how many are overdue, or due today. To show only some lists, put their names in the widget's Parameter field, comma-separated (`Shopping, Home`).
 
 Tapping a line opens Scriptable with "Mark as done" or "Open Reminders", then drops back to the Home Screen; the widget shows the change when it next redraws. Tapping the title opens Reminders. On the Lock Screen: the next three dated reminders (rectangular), the number due today or overdue (circular), the first one (inline).
 
