@@ -11,17 +11,7 @@ S.LOCK_ON = new Color("#FFFFFF");
 S.LOCK_OFF = new Color("#FFFFFF", 0.3);
 
 // ---- measurements ----
-S.PAD = [20, 14, 12, 14];   // top, left, bottom, right
 S.TITLE_SIZE = 13;
-S.TEXT_SIZE = 11;
-S.ROW = 14;                 // text row height
-S.ROW_GAP = 4;
-S.TIME_W = 48;              // time column in every list widget, so they line up
-S.SECTION_GAP = 8;
-S.HEAD_H = 30;              // title + rule + the gaps around them
-S.BOX = 14;                 // Home Screen box
-S.BOX_GAP = 3;
-S.LOCK_BOX = 10;            // Lock Screen box
 S.LOCK_W = 150;             // usable width of the rectangular Lock Screen slot
 S.REFRESH_MIN = 15;
 
@@ -43,24 +33,6 @@ S.WIDGET_H = {
   "402x874": [158, 354], "393x852": [158, 354], "390x844": [158, 354],
   "375x812": [155, 345], "360x780": [155, 345], "375x667": [148, 324], "320x568": [141, 311],
   "466x678": [155, 352],   // iPhone Duo, inner screen (Scriptable reports 466 x 678): measured from screenshots
-};
-
-// sizes for the slot the widget sits in; `as` overrides the family (the in-app preview has none)
-S.metrics = (as) => {
-  const s = Device.screenSize();
-  const family = as || config.widgetFamily || "medium";
-  const large = family === "large" || family === "extraLarge";
-  const small = family === "small";
-  const lock = family.startsWith("accessory");
-  const k = `${Math.min(s.width, s.height)}x${Math.max(s.width, s.height)}`;
-  // the width follows the screen only on screens in the size table, and is never wider than the widget
-  // where its width is known (on the iPhone Duo's inner screen, screen minus margins is far wider)
-  const fromScreen = Math.max(260, Math.min(s.width, s.height) - 56 - 28);
-  const innerW = small ? 130 : !S.WIDGET_H[k] ? 260
-    : S.WIDGET_W[k] ? Math.min(fromScreen, S.WIDGET_W[k] - S.PAD[1] - S.PAD[3]) : fromScreen;
-  const [h, hLarge] = S.WIDGET_H[k] || [141, 311];   // unknown screens: the smallest heights (as S.grid)
-  const availH = (large ? hLarge : h) - S.PAD[0] - S.PAD[2];
-  return { family, large, small, lock, innerW, availH };
 };
 
 // ---- the grid: the overview's timetable layout ----
@@ -87,11 +59,20 @@ S.WIDGET_W = {
 S.grid = (as) => {
   const s = Device.screenSize(), k = `${Math.min(s.width, s.height)}x${Math.max(s.width, s.height)}`;
   const family = as || config.widgetFamily || "medium";
-  const large = family === "large" || family === "extraLarge";
+  const large = family === "large" || family === "extraLarge", small = family === "small";
   const [h, hLarge] = S.WIDGET_H[k] || [141, 311];
-  const W = (S.WIDGET_W[k] || 292) - S.G_PAD[1] - S.G_PAD[3];
+  const W = (small ? h : S.WIDGET_W[k] || 292) - S.G_PAD[1] - S.G_PAD[3];   // a small widget is square
   const H = (large ? hLarge : h) - S.G_PAD[0] - S.G_PAD[2];
-  return { large, W, H, rows: Math.floor(H / S.M) };
+  return { large, small, W, H, rows: Math.floor(H / S.M) };
+};
+// a widget set on the grid, opened by its name as a station sign (the overview's look):
+//   [Weather]  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  London · UV 5
+// returns { w, g, rows }: rows = grid rows left under the sign. The status is left off on a small widget.
+S.board = (label, status, signUrl) => {
+  const w = S.widget();
+  const g = S.grid();
+  S.gSection(w, g.W, label, g.small ? null : status, signUrl);
+  return { w, g, rows: g.rows - 1 };
 };
 // a fixed-size cell: { text, w, font, right }; text is cut with "…", never shrunk
 S.gCell = (row, c, h) => {
@@ -139,76 +120,19 @@ S.gSection = (parent, W, label, status, signUrl) => {
   return row;
 };
 
-// how many text rows fit under `sections` headers
-S.rowsFor = (availH, sections = 1) =>
-  Math.max(sections, Math.floor(
-    (availH - sections * S.HEAD_H - (sections - 1) * S.SECTION_GAP + sections * S.ROW_GAP) / (S.ROW + S.ROW_GAP)));
-
 // a Home Screen widget with the panel colour and margins
 S.widget = () => {
   const w = new ListWidget();
   w.backgroundColor = S.BG;
-  w.setPadding(...S.PAD);
+  w.setPadding(...S.G_PAD);
   return w;
 };
-
-// header: title left, optional text right, hairline rule underneath. Returns the title row.
-S.header = (w, innerW, titleText, rightText) => {
-  const head = w.addStack(); head.size = new Size(innerW, 16); head.bottomAlignContent();
-  const title = head.addText(titleText);
-  title.font = Font.mediumSystemFont(S.TITLE_SIZE); title.textColor = S.FG; title.lineLimit = 1;
-  head.addSpacer(12);
-  head.addSpacer();
-  if (rightText) {
-    const right = head.addText(rightText);
-    right.font = Font.systemFont(S.TEXT_SIZE); right.textColor = S.FG; right.lineLimit = 1;
-  }
-  w.addSpacer(5);
-  const rule = w.addStack(); rule.size = new Size(innerW, 1); rule.backgroundColor = S.FG;
-  w.addSpacer(8);
-  return head;
-};
-
-// one text row made of cells: { text, w, mono, right, colour }.
-// Cells with a width are fixed columns; one cell without a width takes the remaining space.
-S.row = (w, innerW, cells, colour = S.FG) => {
-  const row = w.addStack(); row.size = new Size(innerW, S.ROW); row.centerAlignContent();
-  for (const c of cells) {
-    const put = parent => {
-      const t = parent.addText(String(c.text)); t.lineLimit = 1;
-      t.font = c.mono ? Font.regularMonospacedSystemFont(S.TEXT_SIZE) : Font.mediumSystemFont(S.TEXT_SIZE);
-      t.textColor = c.colour || colour;
-    };
-    if (c.w) {
-      const col = row.addStack(); col.size = new Size(c.w, S.ROW); col.centerAlignContent();
-      if (c.right) col.addSpacer();
-      put(col);
-      if (!c.right) col.addSpacer();
-    } else {
-      put(row);
-      row.addSpacer();
-    }
-  }
-  return row;
-};
-
-// a one-line message, for empty and error states (white like everything else: no grey text)
-S.note = (w, innerW, text, indent = 0) =>
-  S.row(w, innerW, indent ? [{ text: "", w: indent }, { text }] : [{ text }]);
 
 // a square box, filled or empty
 S.box = (parent, size, on, lock = false) => {
   const c = parent.addStack(); c.size = new Size(size, size); c.cornerRadius = 0;
   c.backgroundColor = lock ? (on ? S.LOCK_ON : S.LOCK_OFF) : (on ? S.FG : S.EMPTY);
   return c;
-};
-
-// a run of `count` boxes with the first `filled` switched on
-S.bar = (parent, count, size, filled, lock = false) => {
-  for (let i = 0; i < count; i++) {
-    if (i > 0) parent.addSpacer(S.BOX_GAP);
-    S.box(parent, size, i < filled, lock);
-  }
 };
 
 // push content to the top edge and set the refresh interval

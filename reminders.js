@@ -1,14 +1,13 @@
 const S = importModule("swiss");
 
-// "Reminders": what's left to do from Apple Reminders, one line each.
-//   Reminders                     2 overdue
-//   ───────────────────────────────────────
-//   24.11  Renew passport          <- overdue: its date
-//   09:00  Call landlord           <- due today at a time
-//   —      Buy batteries           <- due today, no time
-//   28.11  Book dentist            <- due later
-//          Fix bike light          <- no due date (newest first, after the dated ones)
-// Tap a line to mark it done (Scriptable opens, asks, and closes); tap the title to open Reminders.
+// "Reminders": what's left to do from Apple Reminders, set like the overview's timetable:
+//   [Reminders]  ━━━━━━━━━━━━━━━━━━━━  1 overdue
+//   LATE   24.11  Renew passport      <- overdue: LATE, then its date (or time, if due earlier today)
+//   FRI    —      Buy batteries       <- today: the weekday, "—" when it has no time
+//          14:00  Call landlord
+//   SUN    09:00  Book dentist        <- later: the weekday within a week, the date beyond
+//                 Fix bike light      <- no due date (newest first, after the dated ones)
+// Tap a line to mark it done (Scriptable opens, asks, and closes); tap the sign to open Reminders.
 // The widget's Parameter field can name lists to show, e.g. "Shopping, Home"; empty = every list.
 const TITLE = "Reminders";
 const REMINDERS_URL = "x-apple-reminderkit://";
@@ -57,19 +56,36 @@ function headRight(data) {
 }
 
 // ---- Home Screen widget ----
+// the day column: LATE for overdue, the weekday within a week, the date beyond; blank without a date
+function dayText(it) {
+  if (!it.due) return "";
+  if (it.overdue) return "LATE";
+  const d = new Date(it.due); d.setHours(0, 0, 0, 0);
+  const days = Math.round((d - S.dayStart(0)) / 86400000);
+  return days < 7 ? S.WD[it.due.getDay()].slice(0, 3).toUpperCase() : S.dayMonth(it.due);
+}
+// the time column: the date when overdue from an earlier day, else the time, "—" without one
+function timeText(it) {
+  if (!it.due) return "";
+  if (it.overdue && it.due < S.dayStart(0)) return S.dayMonth(it.due);
+  return it.timed ? S.timeLabel(it.due) : "—";
+}
+
 function buildWidget(data) {
-  const w = S.widget();
-  const { innerW, availH, small } = S.metrics();
-  const head = S.header(w, innerW, TITLE, small ? null : headRight(data));
-  head.url = REMINDERS_URL;
-  if (data.error) { S.note(w, innerW, data.error); return S.finish(w); }
-  if (!data.items.length) { S.note(w, innerW, "Nothing to do", small ? 0 : S.TIME_W); return S.finish(w); }
+  const { w, g, rows } = S.board(TITLE, headRight(data), REMINDERS_URL);
+  const note = text => S.gRow(w, g.W, g.small ? [{ text }] : [{ text: "", w: S.G.KEY }, { text }]);
+  if (data.error) { note(data.error); return S.finish(w); }
+  if (!data.items.length) { note("Nothing to do"); return S.finish(w); }
   const run = URLScheme.forRunningScript();
-  data.items.slice(0, S.rowsFor(availH, 1)).forEach((it, i) => {
-    if (i > 0) w.addSpacer(S.ROW_GAP);
-    const cells = small ? [{ text: it.title }] : [{ text: whenText(it), w: S.TIME_W, mono: true }, { text: it.title }];
-    S.row(w, innerW, cells).url = `${run}?done=${encodeURIComponent(it.id)}`;
-  });
+  let prev = null;
+  for (const it of data.items.slice(0, rows)) {
+    const day = dayText(it);
+    const what = { text: it.title };
+    const cells = g.small ? [{ text: whenText(it), w: S.G.T, font: S.F.mono }, what]
+      : [{ text: day === prev ? "" : day, w: S.G.D, font: S.F.key }, { text: timeText(it), w: S.G.T, font: S.F.mono }, what];
+    S.gRow(w, g.W, cells).url = `${run}?done=${encodeURIComponent(it.id)}`;
+    prev = day;
+  }
   return S.finish(w);
 }
 

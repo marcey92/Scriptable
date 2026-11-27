@@ -73,10 +73,10 @@ function buildLockRect(q) {
 }
 
 // Home Screen: the same quote under a header, in the shared style
+// Home Screen: the "Motivation" station sign, then the quote
 function buildWidget(q) {
-  const w = S.widget();
-  const { innerW } = S.metrics();
-  S.header(w, innerW, "Motivation", null);
+  const { w } = S.board("Motivation", null);
+  w.addSpacer(6);
   const t = w.addText(q);
   t.font = Font.mediumSystemFont(S.TITLE_SIZE); t.textColor = S.FG; t.lineLimit = 5;
   w.addSpacer();

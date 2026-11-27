@@ -42,11 +42,10 @@ function headRight(data) {
   return data.updated ? N.whenText(data.updated) : null;
 }
 
+// set like the overview: the name as a station sign, then day | time | kind | what
 function buildWidget(data) {
-  const w = S.widget();
-  const { innerW, availH, small } = S.metrics();
-  S.header(w, innerW, TITLE, headRight(data));
-  N.drawRows(w, innerW, S.rowsFor(availH, 1), data, small, "Nothing yet");
+  const { w, g, rows } = S.board(TITLE, headRight(data));
+  N.drawTimetable(w, g.W, data, rows, "Nothing yet", g.small);
   return S.finish(w);
 }
 

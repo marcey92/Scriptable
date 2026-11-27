@@ -286,7 +286,7 @@ async function runInner(file, opts) {
     "strong gusts show as a range": ({ text }) => /\d+–40 mph/.test(text),
   }, note: "gusty" });
   await run("weather.js", { family: "medium", sunny: true, expect: {
-    "UV from 3 shows next to the place": ({ text }) => /^Weather\s+London · UV \d+$/.test(text.split("\n")[0]),
+    "UV from 3 shows next to the place": ({ text }) => /^Weather\s+■\s+London · UV \d+$/.test(text.split("\n")[0]),
   }, note: "sunny" });
   await run("weather.js", { family: "medium", offline: true, note: "offline, cached" });
   delete files["/docs/swiss-weather.json"];
@@ -410,20 +410,21 @@ async function runInner(file, opts) {
     { when: iso(0.2), title: "Telegram", detail: "Sent: Boiler repair today" },
     { when: iso(1), title: "Email", detail: "Marked 4 newsletters read" },
   ] } });
+  await run("hermes.js", { token: "tok", feeds: activity(0.05), family: "small", note: "small" });
   await run("hermes.js", { token: "tok", feeds: activity(0.05), family: "medium", expect: {
-    "header shows when Hermes last ran": ({ text }) => /^Hermes\s+\d\d:\d\d$/.test(text.split("\n")[0]),
+    "header shows when Hermes last ran": ({ text }) => /^Hermes\s+■\s+\d\d:\d\d$/.test(text.split("\n")[0]),
     "one line per action: time, kind, what": ({ text }) => /\d\d:\d\d·?\s+Calendar\s+Added Flight to Cancún/.test(text) && text.includes("Marked 4 newsletters read"),
     "no failure line when the sync is fine": ({ text }) => !text.includes("★"),
   }, note: "activity" });
   await run("hermes.js", { token: "tok", feeds: activity(3), family: "medium", expect: {
-    "an old run shows the stale marker": ({ text }) => /^Hermes\s+Stale since/.test(text.split("\n")[0]),
+    "an old run shows the stale marker": ({ text }) => /^Hermes\s+■\s+Stale since/.test(text.split("\n")[0]),
   }, note: "stale" });
   await run("hermes.js", { token: "tok", feeds: {}, family: "medium", expect: {
     "feed unavailable: the last cached list is shown": ({ text }) => text.includes("Added Flight to Cancún"),
   }, note: "feed unavailable" });
   await run("overview.js", { token: "tok", feeds: calFeed([{ ...checkin, id: "new-one", title: "Dentist" }]), saveFails: true, family: "large", note: "event can't be saved" });
   await run("hermes.js", { token: "tok", feeds: activity(0.05), family: "medium", expect: {
-    "a failed calendar add shows as a starred line at the top": ({ text }) => /★ Calendar\s+Couldn't add Dentist/.test(text.split("\n")[2]),
+    "a failed calendar add shows as a starred line at the top": ({ text }) => /★ Calendar\s+Couldn't add Dentist/.test(text.split("\n")[1]),
   }, note: "calendar failure" });
   await run("overview.js", { token: "tok", feeds: calFeed([{ ...checkin, id: "new-one", title: "Dentist" }]), family: "large", note: "event saved on retry" });
   await run("hermes.js", { token: "tok", feeds: activity(0.05), family: "medium", expect: {
@@ -567,7 +568,7 @@ async function runInner(file, opts) {
   await run("overview.js", { ...widgetOpts, inApp: true, query: { habit: "Meditate" }, expect: {
     "tapping a habit row ticks it": ({ files }) => JSON.parse(files["/docs/habit-grid.json"]).Meditate.includes(new Date().toISOString().slice(0, 10)) !== JSON.parse(before).Meditate?.includes(new Date().toISOString().slice(0, 10)),
   }, note: "one-tap" });
-  for (const family of ["accessoryRectangular", "accessoryInline", "small"]) await run("quotes.js", { family });
+  for (const family of ["accessoryRectangular", "accessoryInline", "small", "medium"]) await run("quotes.js", { family });
   await run("quotes.js", { family: "accessoryRectangular", expect: {
     "a quote for today's weekday, white, up to four lines": ({ widget }) => { const t = widget.children[0]; return typeof t.text === "string" && t.text.length > 10 && t.lineLimit === 4; },
     "redraws just after midnight": ({ widget }) => widget.refreshAfterDate > new Date() && widget.refreshAfterDate.getHours() === 0,
@@ -583,14 +584,14 @@ async function runInner(file, opts) {
   }
   for (const family of [...home, ...lock]) await run("reminders.js", { family });
   await run("reminders.js", { family: "large", expect: {
-    "overdue first, then today (no time first, then by time), later, then undated newest first": ({ text }) => {
-      const l = text.split("\n").slice(2).map(x => x.replace(/\s+/g, " ").trim());
-      return /^\d\d\.\d\d Renew passport$/.test(l[0]) && l[1] === "— Buy batteries" && /^\d\d:\d\d Call landlord$/.test(l[2])
-        && /^\d\d\.\d\d Book dentist$/.test(l[3]) && l[4] === "Fix bike light" && l[5] === "Old idea";
+    "overdue first (LATE, its date), then today (no time first, then by time), later, then undated newest first": ({ text }) => {
+      const l = text.split("\n").slice(1).map(x => x.replace(/\s+/g, " ").trim());
+      return /^LATE \d\d\.\d\d Renew passport$/.test(l[0]) && /^[A-Z]{3} — Buy batteries$/.test(l[1]) && /^([A-Z]{3} )?\d\d:\d\d Call landlord$/.test(l[2])
+        && /^[A-Z]{3} 09:00 Book dentist$/.test(l[3]) && l[4] === "Fix bike light" && l[5] === "Old idea";
     },
-    "header counts the overdue ones": ({ text }) => /Reminders\s+1 overdue/.test(text.split("\n")[0]),
-    "each line links to marking it done, the title opens Reminders": ({ widget }) =>
-      widget.children.filter(c => c.url && c.url.includes("?done=")).length === 6 && widget.children[0].url === "x-apple-reminderkit://",
+    "the sign counts the overdue ones": ({ text }) => /^Reminders\s+■\s+1 overdue$/.test(text.split("\n")[0]),
+    "each line links to marking it done, the sign opens Reminders": ({ widget }) =>
+      widget.children.filter(c => c.url && c.url.includes("?done=")).length === 6 && widget.children[0].children[0].url === "x-apple-reminderkit://",
   }, note: "order" });
   await run("reminders.js", { family: "medium", param: "Shopping", expect: {
     "the Parameter picks the lists": ({ text }) => text.includes("Buy batteries") && !text.includes("Renew passport"),

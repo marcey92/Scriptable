@@ -1,6 +1,6 @@
 # Swiss widgets
 
-Scriptable widgets for iOS in one fixed style: a title, a hairline rule, then rows on a shared grid. White on deep navy, square boxes, no colour.
+Scriptable widgets for iOS in one fixed style, like a station departure board: each section opens with its name as a sign (navy on a white block) and a thick rule, then rows on a 15 pt grid. White on deep navy, square boxes, no colour.
 
 | Script | What it shows | Sizes |
 | --- | --- | --- |
@@ -15,7 +15,7 @@ Scriptable widgets for iOS in one fixed style: a title, a hairline rule, then ro
 
 ## The style lives in one file
 
-Every widget starts with `importModule("swiss")`. Colours, type sizes, margins, the header and the box all come from `swiss.js`, so a change there reaches every widget. A new widget should build itself from `S.widget`, `S.header`, `S.row`, `S.box` and `S.finish` and add no colours or sizes of its own.
+Every widget starts with `importModule("swiss")`. Colours, type, margins, the grid, the sign and the box all come from `swiss.js`, so a change there reaches every widget. A new widget should build itself from `S.board` (a widget opened by its sign), `S.gRow`, `S.box` and `S.finish` and add no colours or sizes of its own.
 
 ## Install
 
