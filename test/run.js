@@ -120,8 +120,6 @@ async function runInner(file, opts) {
     ListWidget,
     Device: {
       screenSize: () => opts.screen || ({ width: 393, height: 852 }),
-      batteryLevel: () => (opts.battery === undefined ? 0.72 : opts.battery),
-      isCharging: () => !!opts.charging, isFullyCharged: () => false,
     },
     Script: { setWidget: w => { widget = w; }, complete: () => {}, name: () => file.replace(".js", "") },
     URLScheme: { forRunningScript: () => "scriptable:///run/x" },
@@ -232,15 +230,12 @@ async function runInner(file, opts) {
   const home = ["small", "medium", "large"];
   const lock = ["accessoryRectangular", "accessoryCircular", "accessoryInline"];
   files["/docs/habit-grid.json"] = JSON.stringify({ Anki: [new Date().toISOString().slice(0, 10)] });
-  for (const family of ["medium", "large", ...lock]) await run("habit-grid.js", { family });
-  await run("habit-grid.js", { inApp: true, note: "menu" });
-  await run("habit-grid.js", { inApp: true, query: { habit: "Meditate" }, note: "one-tap" });
   {
     const early = new Date(); early.setHours(1, 30, 0, 0);
     const day = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     const before = new Date(early); before.setDate(before.getDate() - 1);
     files["/docs/habit-grid.json"] = JSON.stringify({});
-    await run("habit-grid.js", { inApp: true, query: { habit: "Gratitude" }, clock: early, expect: {
+    await run("overview.js", { inApp: true, query: { habit: "Gratitude" }, clock: early, expect: {
       "a tick at 01:30 counts for the day before (the habit day turns over at 4am)": ({ files }) => JSON.parse(files["/docs/habit-grid.json"]).Gratitude.includes(day(before)),
     }, note: "tick at 01:30" });
     files["/docs/habit-grid.json"] = JSON.stringify({ Anki: [new Date().toISOString().slice(0, 10)] });
@@ -250,7 +245,7 @@ async function runInner(file, opts) {
     const d = new Date(Date.now() - 4 * 3600 * 1000); d.setDate(d.getDate() - 2);
     const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     const saved = files["/docs/habit-grid.json"];
-    await run("habit-grid.js", { inApp: true, sheets: [4, 1, 2], note: "tick an earlier day", expect: {
+    await run("overview.js", { inApp: true, query: { menu: "1" }, sheets: [4, 1, 2], note: "tick an earlier day", expect: {
       "Meditate is ticked for two days ago, and nothing else changes": ({ files }) => {
         const data = JSON.parse(files["/docs/habit-grid.json"]);
         return JSON.stringify(data.Meditate) === JSON.stringify([...(JSON.parse(saved).Meditate || []), k]) && JSON.stringify(data.Anki) === JSON.stringify(JSON.parse(saved).Anki);
@@ -263,27 +258,18 @@ async function runInner(file, opts) {
     const d = new Date(Date.now() - 4 * 3600 * 1000); d.setDate(d.getDate() - 2);
     const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     const saved = files["/docs/habit-grid.json"];
-    for (const file of ["habit-grid.js", "overview.js"]) {
+    for (const file of ["overview.js"]) {
       await run(file, { inApp: true, query: { days: "Gratitude" }, sheets: [2], token: "tok", note: "tap a name, fix two days ago", expect: {
         "Gratitude is ticked for two days ago only": ({ files }) => JSON.stringify(JSON.parse(files["/docs/habit-grid.json"]).Gratitude) === JSON.stringify([k]),
       } });
       files["/docs/habit-grid.json"] = saved;
     }
     const urls = n => [n.url, ...(n.children || []).flatMap(urls)].filter(Boolean);
-    await run("habit-grid.js", { family: "medium", note: "name links", expect: {
+    await run("overview.js", { family: "large", token: "tok", note: "name links", expect: {
       "each habit's name opens its days": ({ widget }) => urls(widget).includes("scriptable:///run/x?days=Cold%20shower"),
     } });
   }
-  await run("habit-grid.js", { family: "medium", note: "after one-tap" });
-  for (const family of [...home, "accessoryRectangular", "accessoryInline"]) await run("calendar-list.js", { family });
-  await run("calendar-list.js", { family: "medium", param: "Google: you@gmail.com", note: "Google parameter" });
-  await run("calendar-list.js", { family: "medium", param: "Nope", note: "unknown calendar" });
-  await run("calendar-list.js", { family: "medium", events: [], note: "empty week" });
-  await run("calendar-list.js", { family: "medium", noCalendar: true, note: "no access" });
-  await run("calendar-list.js", { inApp: true });
-  for (const family of [...home, ...lock]) await run("battery.js", { family });
-  await run("battery.js", { family: "medium", battery: 1, charging: true, note: "100%, charging" });
-  await run("battery.js", { family: "small", battery: 0.03, note: "3%" });
+  await run("overview.js", { family: "large", noCalendar: true, note: "no calendar access" });
   for (const family of [...home, ...lock]) await run("weather.js", { family });
   await run("weather.js", { family: "accessoryRectangular", expect: {
     "header, then now, range and rain": ({ text }) => /^Weather/.test(text) && /^\d+°  \w/m.test(text) && /^Low -?\d+° · High -?\d+°$/m.test(text) && /^Rain \d+% at \d\d:\d\d$/m.test(text),
@@ -423,18 +409,18 @@ async function runInner(file, opts) {
   const flight = { id: "tui-tom092", title: "Flight to Cancún (TUI TOM092)", start: inDays(2, 9), end: inDays(2, 20), location: "LGW", notes: "Booking ref" };
   const checkin = { id: "tui-checkin", title: "Check in: TUI TOM092", start: inDays(1, 9) };
   const count = t => savedEvents.filter(e => e.title === t).length;
-  await run("calendar-list.js", { token: "tok", feeds: calFeed([flight, checkin]), family: "large", expect: {
+  await run("overview.js", { token: "tok", feeds: calFeed([flight, checkin]), family: "large", expect: {
     "both pushed events are added": () => count(flight.title) === 1 && count(checkin.title) === 1,
     "a missing end becomes one hour": () => { const c = savedEvents.find(e => e.title === checkin.title); return c.endDate - c.startDate === 3600 * 1000; },
     "they show in the widget": ({ text }) => text.includes("Check in: TUI TOM092"),
   }, note: "calendar feed" });
-  await run("calendar-list.js", { token: "tok", feeds: calFeed([flight, checkin]), family: "large", expect: {
+  await run("overview.js", { token: "tok", feeds: calFeed([flight, checkin]), family: "large", expect: {
     "a second refresh adds nothing": () => count(flight.title) === 1 && count(checkin.title) === 1 && savedEvents.length === 2,
   }, note: "calendar feed again" });
   await run("overview.js", { token: "tok", feeds: calFeed([{ ...flight, notes: "Gate closes 08:20" }, checkin]), family: "large", expect: {
     "a changed event is updated in place, not duplicated": () => savedEvents.length === 2 && savedEvents.find(e => e.title === flight.title).notes === "Gate closes 08:20",
   }, note: "calendar feed changed" });
-  await run("calendar-list.js", { token: "tok", feeds: {}, family: "large", expect: {
+  await run("overview.js", { token: "tok", feeds: {}, family: "large", expect: {
     "no feed: nothing added, nothing removed": () => savedEvents.length === 2,
   }, note: "no calendar feed" });
   // the Hermes widget: what Hermes did on its own, and calendar failures on this phone
@@ -454,15 +440,15 @@ async function runInner(file, opts) {
   await run("hermes.js", { token: "tok", feeds: {}, family: "medium", expect: {
     "feed unavailable: the last cached list is shown": ({ text }) => text.includes("Added Flight to Cancún"),
   }, note: "feed unavailable" });
-  await run("calendar-list.js", { token: "tok", feeds: calFeed([{ ...checkin, id: "new-one", title: "Dentist" }]), saveFails: true, family: "medium", note: "event can't be saved" });
+  await run("overview.js", { token: "tok", feeds: calFeed([{ ...checkin, id: "new-one", title: "Dentist" }]), saveFails: true, family: "large", note: "event can't be saved" });
   await run("hermes.js", { token: "tok", feeds: activity(0.05), family: "medium", expect: {
     "a failed calendar add shows as a starred line at the top": ({ text }) => /★ Calendar\s+Couldn't add Dentist/.test(text.split("\n")[2]),
   }, note: "calendar failure" });
-  await run("calendar-list.js", { token: "tok", feeds: calFeed([{ ...checkin, id: "new-one", title: "Dentist" }]), family: "medium", note: "event saved on retry" });
+  await run("overview.js", { token: "tok", feeds: calFeed([{ ...checkin, id: "new-one", title: "Dentist" }]), family: "large", note: "event saved on retry" });
   await run("hermes.js", { token: "tok", feeds: activity(0.05), family: "medium", expect: {
     "a later successful sync clears it": ({ text }) => !text.includes("Couldn't add"),
   }, note: "failure cleared" });
-  await run("calendar-list.js", { token: "tok", feeds: calFeed([checkin]), offline: true, family: "medium", note: "offline sync" });
+  await run("overview.js", { token: "tok", feeds: calFeed([checkin]), offline: true, family: "large", note: "offline sync" });
   await run("hermes.js", { token: "tok", feeds: activity(0.05), family: "medium", expect: {
     "being offline is not a failure": ({ text }) => !text.includes("★"),
   }, note: "offline is fine" });
@@ -470,12 +456,12 @@ async function runInner(file, opts) {
   for (const family of ["large", "medium", "accessoryInline"]) await run("overview.js", { ...widgetOpts, family });
   // ... and the list widgets must not size anything wider than the narrowest widget either
   const widest = (n) => Math.max(n.size ? n.size.width : 0, ...(n.children || []).map(widest));
-  for (const file of ["weather.js", "calendar-list.js", "hermes.js", "habit-grid.js", "battery.js"])
+  for (const file of ["weather.js", "hermes.js", "orders.js", "reminders.js"])
     await run(file, { ...widgetOpts, family: "medium", screen: { width: 1100, height: 800 }, expect: {
       "nothing wider than a narrow widget": ({ widget }) => widest(widget) <= 292,
     }, note: "unknown screen 1100x800" });
   // the iPhone Duo's inner screen (Scriptable reports 466 x 678) is in the tables: its widgets get their real size
-  for (const file of ["weather.js", "calendar-list.js", "hermes.js", "habit-grid.js", "battery.js"])
+  for (const file of ["weather.js", "hermes.js", "orders.js", "reminders.js"])
     await run(file, { ...widgetOpts, family: "medium", screen: { width: 678, height: 466 }, expect: {
       "on the Duo, rows use the widget's width but no more": ({ widget }) => widest(widget) <= 332 - 28 && widest(widget) > 263,
     }, note: "iPhone Duo" });
@@ -590,9 +576,6 @@ async function runInner(file, opts) {
         const urls = all(widget).filter(n => n.url).map(n => n.url);
         return urls.some(u => u.endsWith("?days=Anki")) && urls.some(u => u.endsWith("?habit=Anki")) && noNested(widget);
       },
-    }, note: "habit tap areas" });
-    await run("habit-grid.js", { family: "medium", expect: {
-      "the habit widget's name and boxes are separate tap areas too": ({ widget }) => noNested(widget) && all(widget).some(n => n.url && n.url.endsWith("?days=Anki")),
     }, note: "habit tap areas" });
   }
   await run("overview.js", { ...widgetOpts, inApp: true, note: "preview" });
