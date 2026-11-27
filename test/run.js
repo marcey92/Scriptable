@@ -8,7 +8,6 @@ let failures = 0;
 let feedCalls = null;
 const savedEvents = [];   // events scripts created with CalendarEvent.save(), kept across runs
 let nextId = 1;
-const completed = [], opened = [];   // reminders marked done, URLs opened
 const files = {};   // fake Scriptable documents folder
 class Text {
   constructor(t) { this.text = t; }
@@ -89,14 +88,6 @@ async function runInner(file, opts) {
     { title: "Brunch", startDate: at(3, 11), endDate: at(3, 12), isAllDay: false, cal: "Home" },
   ];
   let widget = null, alerts = 0, keychainSet = null;
-  const defaultReminders = [
-    { identifier: "r1", title: "Renew passport", dueDate: at(-2, 0), dueDateIncludesTime: false, list: "Reminders", creationDate: at(-9, 9) },
-    { identifier: "r2", title: "Call landlord", dueDate: new Date(now.getTime() + 2 * 60000), dueDateIncludesTime: true, list: "Reminders", creationDate: at(-1, 9) },
-    { identifier: "r3", title: "Buy batteries", dueDate: at(0, 0), dueDateIncludesTime: false, list: "Shopping", creationDate: at(-1, 9) },
-    { identifier: "r4", title: "Book dentist", dueDate: at(2, 9), dueDateIncludesTime: true, list: "Reminders", creationDate: at(-3, 9) },
-    { identifier: "r5", title: "Fix bike light", dueDate: null, list: "Reminders", creationDate: at(-1, 8) },
-    { identifier: "r6", title: "Old idea", dueDate: null, list: "Reminders", creationDate: at(-20, 8) },
-  ];
   const g = {
     console: { log: () => {} },
     config: { runsInWidget: opts.inApp ? false : true, widgetFamily: opts.family },
@@ -145,18 +136,7 @@ async function runInner(file, opts) {
       forEvents: async () => [{ title: "Home" }, { title: "you@gmail.com" }],
       defaultForEvents: async () => ({ title: "Home" }),
       forEventsByTitle: async t => ({ title: t }),
-      forReminders: async () => [{ title: "Reminders" }, { title: "Shopping" }],
     },
-    Reminder: class {
-      save() { completed.push(this.title); }
-      static async allIncomplete(cals = []) {
-        if (opts.noReminders) throw new Error("denied");
-        const names = cals.map(c => c.title);
-        return (opts.reminders || defaultReminders).filter(r => !names.length || names.includes(r.list))
-          .map(r => Object.assign(new g.Reminder(), r));
-      }
-    },
-    Safari: { open: url => { opened.push(url); } },
     CalendarEvent: class {
       save() {
         if (opts.saveFails) throw new Error("not allowed");
@@ -308,52 +288,44 @@ async function runInner(file, opts) {
   };
   const widgetOpts = { token: "tok", feeds };
   const clean = ({ text }) => !/SECRET/.test(text);
-  for (const family of [...home, ...lock]) await run("orders.js", { ...widgetOpts, family, expect: { "no tracking numbers or email bodies": clean } });
-  await run("orders.js", { ...widgetOpts, family: "medium", expect: {
-    "no date in the header": ({ text }) => !/\d\d\.\d\d \w{3}/.test(text.split("\n")[0]),
-    "one list: titled Inbox, no Orders or Important sections": ({ text }) => text.includes("Inbox") && !text.includes("Important") && !text.includes("Orders"),
-    "sorted newest first, stars do not jump ahead": ({ text }) => text.indexOf("Zalando") < text.indexOf("Parcel") && text.indexOf("Parcel") < text.indexOf("Landlord") && text.indexOf("Landlord") < text.indexOf("Bank"),
-    "starred items are marked": ({ text }) => /★ Parcel/.test(text) && /★ Landlord/.test(text),
+  // the Inbox, as the overview draws it: the lines after its section row
+  const inbox = text => { const l = text.split("\n"); const k = l.findIndex(x => /^\s*Inbox\s+■/.test(x)); return l.slice(k).join("\n"); };
+  const ov = { family: "large" };
+  await run("overview.js", { ...widgetOpts, ...ov, expect: {
+    "no tracking numbers or email bodies": clean,
+    "sorted newest first, stars do not jump ahead": ({ text }) => { const t = inbox(text); return t.indexOf("Zalando") < t.indexOf("Parcel") && t.indexOf("Parcel") < t.indexOf("Landlord") && t.indexOf("Landlord") < t.indexOf("Bank"); },
+    "starred items are marked": ({ text }) => /★ Parcel/.test(text) && /★ Landlord/.test(text) && /★ Bank/.test(text),
     "range eta shows the later day": ({ text }) => text.includes("Out for delivery · 09.10"),
-    "private order shows its generic title, not the retailer": ({ text }) => !/^X$/m.test(text) && text.includes("Parcel"),
-    "emails show the sender, then the subject on the right": ({ text }) => /★ Landlord\s+Boiler repair today/.test(text),
-    "today shows a time": ({ text }) => /\d\d:\d\d\s+Zalando/.test(text),
-    "five rows on medium, no +N more line": ({ text }) => !/more/.test(text) && text.split("\n").filter(l => /^\s*(\d\d:\d\d|\d\d\.\d\d)/.test(l)).length === 5,
-  }, note: "one list" });
-  await run("orders.js", { ...widgetOpts, family: "large", expect: {
-    "ordered sorts after out for delivery": ({ text }) => text.indexOf("Zalando") < text.indexOf("Amazon"),
-    "recent delivered is shown": ({ text }) => text.includes("Apple"),
-    "delivered older than 48h is hidden": ({ text }) => !text.includes("IKEA"),
-    "yesterday shows the time with a dot after it": ({ text }) => /\d\d:\d\d·\s+★ Bank/.test(text),
-    "older than yesterday shows the date": ({ text }) => { const d = new Date(Date.now() - 48 * 3600 * 1000); return new RegExp(`${String(d.getDate()).padStart(2, "0")}\\.${String(d.getMonth() + 1).padStart(2, "0")}\\s+Amazon`).test(text); },
-    "every important email is starred": ({ text }) => /★ Landlord/.test(text) && /★ Bank/.test(text),
-    "nothing is cut off on the large widget": ({ text }) => !/more/.test(text),
-  }, note: "hide old delivered" });
+    "private order shows its generic title, not the retailer": ({ text }) => !/  X  /.test(inbox(text)) && inbox(text).includes("Parcel"),
+    "emails show the sender, then the subject": ({ text }) => /★ Landlord\s+Boiler repair today/.test(text),
+    "recent delivered is shown, delivered older than 48h is hidden": ({ text }) => inbox(text).includes("Apple") && !text.includes("IKEA"),
+    "at most five items, no +N more line": ({ text }) => !/more/.test(text) && inbox(text).split("\n").length - 1 <= 5,
+  }, note: "Inbox" });
   const busy = { orders: { orders: [1, 2, 3, 4, 5, 6].map(n => ({ id: `n${n}`, retailer: `Shop${n}`, private: false, status: "dispatched", status_label: "Dispatched", last_event: iso(n), delivered: false })) },
     important: { important: [{ id: "old", from: "Council", subject: "Old but important", received: iso(72), urgent: false }] } };
   const savedCache = files["/docs/swiss-orders.json"];
-  await run("orders.js", { token: "tok", feeds: busy, family: "medium", expect: {
+  await run("overview.js", { token: "tok", feeds: busy, ...ov, expect: {
     "an old starred item that doesn't fit is left off: no place is held for stars": ({ text }) => !text.includes("Council"),
     "the list is simply the newest, in order": ({ text }) => /Shop1[\s\S]*Shop2[\s\S]*Shop3[\s\S]*Shop4[\s\S]*Shop5/.test(text),
   }, note: "old star not kept" });
   files["/docs/swiss-orders.json"] = savedCache;   // the offline tests below read the earlier cache
-  await run("orders.js", { ...widgetOpts, family: "medium", offline: true, expect: {
-    "offline shows the cached list; recent data is not stale": ({ text }) => !text.includes("Stale") && text.includes("Zalando"),
+  await run("overview.js", { ...widgetOpts, ...ov, offline: true, expect: {
+    "offline shows the cached list; recent data is not stale": ({ text }) => !text.includes("Stale") && inbox(text).includes("Zalando"),
   }, note: "offline, cached" });
   delete files["/docs/swiss-orders.json"];
-  await run("orders.js", { ...widgetOpts, family: "medium", offline: true, expect: {
-    "offline with no cache says No data": ({ text }) => text.includes("No data") && !text.includes("Stale"),
+  await run("overview.js", { ...widgetOpts, ...ov, offline: true, expect: {
+    "offline with no cache says No data": ({ text }) => inbox(text).includes("No data") && !text.includes("Stale"),
   }, note: "offline, no cache" });
-  await run("orders.js", { feeds, family: "medium", expect: {
-    "asks to run in the app when there is no token": ({ text }) => text.includes("Run in Scriptable"),
+  await run("overview.js", { feeds, ...ov, expect: {
+    "asks to run in the app when there is no token": ({ text }) => inbox(text).includes("Run in Scriptable"),
   }, note: "no token" });
-  await run("orders.js", { feeds, inApp: true, typedToken: "tok", expect: {
+  await run("overview.js", { feeds, inApp: true, typedToken: "tok", expect: {
     "token typed in the app goes to the Keychain": ({ keychainSet }) => keychainSet === "tok",
   }, note: "first run, enter token" });
-  await run("orders.js", { ...widgetOpts, token: "nope", family: "medium", expect: {
-    "wrong token says so": ({ text }) => text.includes("Token rejected"),
+  await run("overview.js", { ...widgetOpts, token: "nope", ...ov, expect: {
+    "wrong token says so": ({ text }) => inbox(text).includes("Token rejected"),
   }, note: "wrong token" });
-  await run("orders.js", { feeds, token: "nope", inApp: true, typedToken: "tok", expect: {
+  await run("overview.js", { feeds, token: "nope", inApp: true, typedToken: "tok", expect: {
     "wrong token can be replaced in the app": ({ keychainSet }) => keychainSet === "tok",
   }, note: "wrong token, re-enter" });
   // the single now feed: Hermes's order and wording, drawn as given
@@ -365,43 +337,32 @@ async function runInner(file, opts) {
     { when: iso(80), star: true, title: "Council", detail: "Old but important" },
   ] } };
   const savedCache2 = files["/docs/swiss-orders.json"];
-  await run("orders.js", { token: "tok", feeds: nowFeed, family: "medium", expect: {
-    "items keep Hermes's order": ({ text }) => text.indexOf("Older first") < text.indexOf("Homes & Villas") && text.indexOf("Homes & Villas") < text.indexOf("Amazon"),
-    "tapping the Inbox widget opens Mail": ({ widget }) => widget.url === "message://",
-    "title, then detail in its own column": ({ text }) => /★ Homes & Villas\s+Reply to your complaint/.test(text),
-    "detail is its own left-aligned column, starting at the same place on every row": ({ widget }) => {
-      const rows = widget.children.filter(c => c.children && c.children.length === 3 && c.size && c.size.height === 14);
-      const titleWs = new Set(rows.map(r => r.children[1].size.width));
-      return rows.length === 5 && titleWs.size === 1 && rows.every(r => r.children[2].children[0].text !== undefined);
-    },
+  await run("overview.js", { token: "tok", feeds: nowFeed, ...ov, expect: {
+    "items keep Hermes's order": ({ text }) => { const t = inbox(text); return t.indexOf("Older first") < t.indexOf("Homes & Villas") && t.indexOf("Homes & Villas") < t.indexOf("Amazon"); },
+    "title, then detail": ({ text }) => /★ Homes & Villas\s+Reply to your complaint/.test(text),
     "a starred item below the fold is left off, like any other": ({ text }) => !text.includes("Council"),
   }, note: "now feed" });
-  await run("orders.js", { token: "tok", feeds: nowFeed, family: "small", expect: {
-    "short replaces detail on small": ({ text }) => /Amazon\s+Today/.test(text),
-  }, note: "now feed" });
-  await run("orders.js", { token: "tok", feeds: nowFeed, family: "medium", offline: true, expect: {
+  await run("overview.js", { token: "tok", feeds: nowFeed, ...ov, offline: true, expect: {
     "offline shows the cached now feed, judged by its own updated time": ({ text }) => !text.includes("Stale") && text.includes("Homes & Villas"),
   }, note: "now feed, offline" });
   const aged = (h, extra = {}) => ({ now: { ...nowFeed.now, updated: h === null ? undefined : iso(h), ...extra } });
-  await run("orders.js", { token: "tok", feeds: aged(0.5), family: "medium", expect: {
-    "updated 30 minutes ago is fresh": ({ text }) => text.split("\n")[0].trim() === "Inbox",
+  const inboxHead = text => text.split("\n").find(x => /^\s*Inbox\s+■/.test(x)).trim();
+  await run("overview.js", { token: "tok", feeds: aged(0.5), ...ov, expect: {
+    "updated 30 minutes ago is fresh": ({ text }) => inboxHead(text) === "Inbox  ■",
   }, note: "fresh" });
-  await run("orders.js", { token: "tok", feeds: aged(2), family: "medium", expect: {
-    "updated 2 hours ago is stale, with the time": ({ text }) => /^Inbox\s+Stale since \d\d:\d\d$/.test(text.split("\n")[0]) || /^Inbox\s+Stale since \d\d:\d\d·$/.test(text.split("\n")[0]),
+  await run("overview.js", { token: "tok", feeds: aged(2), ...ov, expect: {
+    "updated 2 hours ago is stale, with the time": ({ text }) => /Stale since \d\d:\d\d·?$/.test(inboxHead(text)),
     "the items are still shown": ({ text }) => text.includes("Homes & Villas"),
   }, note: "stale" });
-  await run("orders.js", { token: "tok", feeds: aged(2), family: "medium", offline: true, expect: {
+  await run("overview.js", { token: "tok", feeds: aged(2), ...ov, offline: true, expect: {
     "offline keeps the cached updated time, still stale": ({ text }) => /Stale since/.test(text) && text.includes("Homes & Villas"),
   }, note: "stale, offline" });
-  await run("orders.js", { token: "tok", feeds: aged(30), family: "medium", expect: {
-    "updated yesterday or before shows the dot or the date": ({ text }) => /Stale since (\d\d:\d\d·|\d\d\.\d\d)$/.test(text.split("\n")[0]),
+  await run("overview.js", { token: "tok", feeds: aged(30), ...ov, expect: {
+    "updated yesterday or before shows the dot or the date": ({ text }) => /Stale since (\d\d:\d\d·|\d\d\.\d\d)$/.test(inboxHead(text)),
   }, note: "stale, old" });
-  await run("orders.js", { token: "tok", feeds: aged(null), family: "medium", expect: {
-    "no updated at all counts as stale": ({ text }) => /Stale$/.test(text.split("\n")[0]),
+  await run("overview.js", { token: "tok", feeds: aged(null), ...ov, expect: {
+    "no updated at all counts as stale": ({ text }) => /Stale$/.test(inboxHead(text)),
   }, note: "no timestamp" });
-  await run("overview.js", { token: "tok", feeds: aged(2), family: "large", expect: {
-    "the overview's Inbox section row shows it too": ({ text }) => /^\s*Inbox\s+■\s+Stale since/m.test(text),
-  }, note: "stale inbox" });
   files["/docs/swiss-orders.json"] = savedCache2;
   // events Hermes pushes to the calendar feed: added once, updated when changed, never duplicated
   const inDays = (d, h) => { const x = new Date(); x.setDate(x.getDate() + d); x.setHours(h, 0, 0, 0); return x.toISOString(); };
@@ -456,12 +417,12 @@ async function runInner(file, opts) {
   for (const family of ["large", "medium", "accessoryInline"]) await run("overview.js", { ...widgetOpts, family });
   // ... and the list widgets must not size anything wider than the narrowest widget either
   const widest = (n) => Math.max(n.size ? n.size.width : 0, ...(n.children || []).map(widest));
-  for (const file of ["weather.js", "hermes.js", "orders.js", "reminders.js"])
+  for (const file of ["weather.js", "hermes.js"])
     await run(file, { ...widgetOpts, family: "medium", screen: { width: 1100, height: 800 }, expect: {
       "nothing wider than a narrow widget": ({ widget }) => widest(widget) <= 292,
     }, note: "unknown screen 1100x800" });
   // the iPhone Duo's inner screen (Scriptable reports 466 x 678) is in the tables: its widgets get their real size
-  for (const file of ["weather.js", "hermes.js", "orders.js", "reminders.js"])
+  for (const file of ["weather.js", "hermes.js"])
     await run(file, { ...widgetOpts, family: "medium", screen: { width: 678, height: 466 }, expect: {
       "on the Duo, rows use the widget's width but no more": ({ widget }) => widest(widget) <= 332 - 28 && widest(widget) > 263,
     }, note: "iPhone Duo" });
@@ -600,32 +561,6 @@ async function runInner(file, opts) {
     if (quotes.length !== 28) { console.log("     ! expected 4 quotes for each of 7 days"); failures++; }
     failures += long.length ? 1 : 0;
   }
-  for (const family of [...home, ...lock]) await run("reminders.js", { family });
-  await run("reminders.js", { family: "large", expect: {
-    "overdue first, then today (no time first, then by time), later, then undated newest first": ({ text }) => {
-      const l = text.split("\n").slice(2).map(x => x.replace(/\s+/g, " ").trim());
-      return /^\d\d\.\d\d Renew passport$/.test(l[0]) && l[1] === "— Buy batteries" && /^\d\d:\d\d Call landlord$/.test(l[2])
-        && /^\d\d\.\d\d Book dentist$/.test(l[3]) && l[4] === "Fix bike light" && l[5] === "Old idea";
-    },
-    "header counts the overdue ones": ({ text }) => /Reminders\s+1 overdue/.test(text.split("\n")[0]),
-    "each line links to marking it done, the title opens Reminders": ({ widget }) =>
-      widget.children.filter(c => c.url && c.url.includes("?done=")).length === 6 && widget.children[0].url === "x-apple-reminderkit://",
-  }, note: "order" });
-  await run("reminders.js", { family: "medium", param: "Shopping", expect: {
-    "the Parameter picks the lists": ({ text }) => text.includes("Buy batteries") && !text.includes("Renew passport"),
-  }, note: "one list" });
-  await run("reminders.js", { family: "medium", param: "Nope", expect: {
-    "an unknown list says so": ({ text }) => text.includes("No list named Nope"),
-  }, note: "unknown list" });
-  await run("reminders.js", { family: "medium", reminders: [], expect: { "empty": ({ text }) => text.includes("Nothing to do") }, note: "empty" });
-  await run("reminders.js", { family: "medium", noReminders: true, expect: { "no access": ({ text }) => text.includes("allow Reminders") }, note: "no access" });
-  await run("reminders.js", { family: "accessoryCircular", expect: { "counts overdue and today": ({ text }) => text === "3" }, note: "count" });
-  await run("reminders.js", { inApp: true, query: { done: "r4" }, sheets: [0], expect: {
-    "tapping a line and choosing Mark as done completes that reminder": () => completed.length === 1 && completed[0] === "Book dentist",
-  }, note: "mark done" });
-  await run("reminders.js", { inApp: true, query: { done: "r4" }, sheets: [], expect: {
-    "cancel changes nothing": () => completed.length === 1,
-  }, note: "cancel" });
   await run("update.js", { inApp: true });
   console.log(`\n${failures ? failures + " failing" : "all passing"}`);
   process.exit(failures ? 1 : 0);

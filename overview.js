@@ -67,11 +67,15 @@ if (!config.runsInWidget && tapped && H.HABITS.includes(tapped)) {
   await H.menu(await H.load(), [{ label: "Calendars…", run: C.chooseCalendars }]);
 } else {
   // the first run in the app asks for calendar access and, if missing, the feed's read token
-  const token = await N.token();
+  let token = await N.token();
+  let now = await N.load(token);
+  if (now.rejected && !config.runsInWidget) {   // wrong token: let the user fix it now
+    const t = await N.askToken("The server rejected the token. Paste the correct read token.");
+    if (t) { token = t; now = await N.load(t); }
+  }
   await C.syncFromFeed(token);         // add any events Hermes pushed before reading the calendar
   const cal = await C.loadDays([], true, LOOK_AHEAD, C.hiddenCalendars());
   const habits = await H.load();
-  const now = await N.load(token);
   const family = config.widgetFamily;
   const widget = family && family.startsWith("accessory") ? S.lockInline("Overview: use the large size") : build(cal, habits, now);
   S.refresh(widget);
